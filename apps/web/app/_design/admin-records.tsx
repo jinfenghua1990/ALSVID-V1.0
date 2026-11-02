@@ -133,7 +133,7 @@ export function CustomerRecords() {
         <div className={styles.heading}>
           <div>
             <h2 className="av-cardtitle">客户业务档案（真实数据）</h2>
-            <p className={styles.muted}>仅列出 Partner 领域标记为 CUSTOMER 的档案；这不是已验证的 Shopify 客户账户，也不能证明车辆所有权。</p>
+            <p className={styles.muted}>仅列出 Partner 领域标记为 CUSTOMER 的档案；这不是已核验的交易账户或车主身份，也不能证明车辆所有权。</p>
           </div>
           <button className="av-btn" type="button" onClick={() => { setSelectedId(''); void load(); }}>刷新记录</button>
         </div>
