@@ -1,6 +1,6 @@
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../../_lib/portal-access';
-import { navigationFor } from '../_design/admin-navigation';
+import { navigationFor } from '../../_design/admin-navigation';
 import { SecurityPolicyEditor } from './security-policy-editor';
 
 export default async function SecuritySettingsPage() {
