@@ -263,6 +263,17 @@ jobs:
             fi
           done
 
+          # Route smoke tests: these handlers are implemented by Next.js Web,
+          # not NestJS. A 404 here would indicate the gateway misrouted them.
+          for route in /api/public/dealer-application /api/public/fc1-reservation; do
+            code="$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:8080$route")"
+            [[ "$code" == "405" ]] || { echo "Next.js public route $route misrouted (HTTP $code)" >&2; exit 1; }
+          done
+          code="$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/api/settings/security-policy)"
+          [[ "$code" == "401" ]] || { echo "Security settings BFF misrouted (HTTP $code)" >&2; exit 1; }
+          code="$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/api/admin/workspace-session)"
+          [[ "$code" == "307" ]] || { echo "Admin session BFF misrouted (HTTP $code)" >&2; exit 1; }
+
       - name: Verify catalog API and guarded visual-editor entry
         if: steps.scope.outputs.docs_only != 'true'
         shell: bash
