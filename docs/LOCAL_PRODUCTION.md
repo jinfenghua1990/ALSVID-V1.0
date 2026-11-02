@@ -41,7 +41,7 @@ pnpm infra:status
 pnpm infra:down
 ```
 
-脚本会检查：当前是无已跟踪改动的 `main`；Neon URL 指向代码允许的唯一 TLS Production 主库；GCP 项目和区域下 `alsvid-api` 可读；本机配置的 R2 endpoint/bucket 与实际 Cloud Run API 配置相同；既有 Secret Manager 引用存在。任一检查不通过即不启动。启动后应访问 `http://127.0.0.1:8080/login?portal=admin` 使用真实用户权限登录。
+脚本会检查：当前是无已跟踪改动、无未跟踪源码文件的 `main`（被 `.gitignore` 忽略的 `infra/.env.local` 不在代码检查范围）；Neon URL 指向代码允许的唯一 TLS Production 主库；GCP 项目和区域下 `alsvid-api` 可读；本机配置的 R2 endpoint/bucket 与实际 Cloud Run API 配置相同；既有 Secret Manager 引用存在。任一检查不通过即不启动。启动后应访问 `http://127.0.0.1:8080/login?portal=admin` 使用真实用户权限登录。
 
 ## 版本与并发安全
 
