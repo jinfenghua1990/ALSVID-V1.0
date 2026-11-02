@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { Database } from './index.js';
+import { orderedMigrationFiles } from './migration-order.js';
 
 const database = new Database();
 const migrationsUrl = new URL('../migrations/', import.meta.url);
@@ -30,7 +31,7 @@ async function migrate(): Promise<void> {
       // adopted on the next run instead of failing.
       await lockClient.query('ALTER TABLE platform.schema_migrations ADD COLUMN IF NOT EXISTS checksum text');
 
-      const files = (await readdir(migrationsUrl)).filter((file) => file.endsWith('.sql')).sort();
+      const files = orderedMigrationFiles(await readdir(migrationsUrl));
       const applied = await lockClient.query<{ filename: string; checksum: string | null }>(
         'SELECT filename, checksum FROM platform.schema_migrations',
       );
@@ -52,6 +53,14 @@ async function migrate(): Promise<void> {
           if (previous === null) {
             await lockClient.query('UPDATE platform.schema_migrations SET checksum=$2 WHERE filename=$1', [filename, checksum]);
           }
+          continue;
+        }
+
+        // 0050 was deployed historically as business master data, not schema.
+        // Retain its file/checksum for already-migrated databases, but NEVER insert
+        // draft placeholder products into newly provisioned environments.
+        if (filename === '0050_seed_initial_alsvid_models.sql') {
+          console.warn('Skipped historical business seed 0050 on this environment; use an explicit seed command if required.');
           continue;
         }
 

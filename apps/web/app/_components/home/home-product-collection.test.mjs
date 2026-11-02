@@ -14,7 +14,7 @@ test("official homepage keeps the brand hero and shows the collection grid befor
 });
 
 test("homepage product cards use existing ALSVID models and detail routes", () => {
-  for (const code of ["FC1", "FC2", "L7", "L8"]) assert.match(page, new RegExp('code: "' + code + '"'));
+  for (const code of ["A1-ULTRA", "L1-PRO", "A1", "L1"]) assert.match(page, new RegExp('code: "' + code + '"'));
   for (const slug of ["fc1", "fc2", "l7", "l8"]) assert.match(page, new RegExp('detail\\("' + slug + '"\\)'));
   assert.match(page, /catalog\.bikes\.models\.details/);
   assert.doesNotMatch(page, /<L8LaunchCard|<L7LaunchCard|<Fc2LaunchCard/);
@@ -38,4 +38,11 @@ test("home cards retain a three-column desktop grid, with a legible single-colum
   assert.match(styles, /@media\(max-width:600px\)\{[\s\S]*?\.home-product-grid\{grid-template-columns:minmax\(0,1fr\)\}/);
   assert.match(styles, /\.home-product-collection a:focus-visible/);
   assert.match(page, /<HomePosterHero/);
+});
+
+
+test("homepage model bindings compare the renamed model codes, not retired labels", () => {
+  const source = readFileSync(new URL("./public-product-bindings.ts", import.meta.url), "utf8");
+  assert.match(source, /FC1_HERO:'A1-ULTRA',FC1_FEATURED:'A1-ULTRA',FC2_LAUNCH:'L1-PRO'/);
+  assert.doesNotMatch(source, /FC1_HERO:'FC1'|FC2_LAUNCH:'FC2'/);
 });
