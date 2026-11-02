@@ -55,7 +55,8 @@ test('one guarded Admin shell and production release target remain authoritative
 
 test('retired subdomain cookie scopes and old framework source locks are forbidden', () => {
   const source = read('apps/web/app/_lib/session-cookie.ts');
-  assert.doesNotMatch(source, /\\.chaibenn\\.com|\\.alsvid\\.com/);
-  assert.match(source, /host\\.endsWith\\('\\.alsvidbike\\.com'\\)/);
+  assert.ok(!source.includes('.chaibenn.com'), 'legacy ChaiBen cookies must not return');
+  assert.ok(!source.includes('.alsvid.com'), 'legacy ALSVID alias cookies must not return');
+  assert.ok(source.includes("host.endsWith('.alsvidbike.com')"));
   assert.equal(exists('docs/COMMERCE_SOURCE_LOCK.json'), false);
 });
