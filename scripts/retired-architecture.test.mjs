@@ -34,6 +34,7 @@ test('retired parallel frameworks cannot be reintroduced into ALSVID production'
     'apps/web/app/admin/workbench.module.css',
     'apps/web/app/_design/live-operations.tsx',
     'apps/web/app/_design/live-operations.json',
+    'packages/contracts',
     'apps/web/app/_components/home/hero.tsx',
     'apps/web/app/_components/home/bike-vector.tsx',
     'apps/web/app/_components/home/folding-demo.tsx',
