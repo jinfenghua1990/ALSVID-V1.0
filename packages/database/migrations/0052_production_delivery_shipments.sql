@@ -77,7 +77,7 @@ BEGIN
     SELECT 1 FROM warehouse.locations l JOIN warehouse.warehouses w ON w.id=l.warehouse_id
     WHERE l.id=NEW.destination_location_id AND w.country_code='CN'
   ) THEN
-    RAISE EXCEPTION 'Domestic delivery destination must be a China warehouse';
+    RAISE EXCEPTION 'Domestic delivery destination must belong to a China warehouse';
   END IF;
   RETURN NEW;
 END;
@@ -96,7 +96,7 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM procurement.purchase_order_lines l
     WHERE l.purchase_order_id=linked_po AND l.sku_id=cargo_sku AND l.line_kind='PURCHASE') THEN
-    RAISE EXCEPTION 'Shipment cargo SKU is not a purchased SKU in source PO';
+    RAISE EXCEPTION 'Shipment cargo SKU does not match a purchased SKU in source PO';
   END IF;
   RETURN NEW;
 END;

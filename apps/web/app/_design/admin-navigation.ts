@@ -131,10 +131,10 @@ export const ADMIN_SECONDARY_NAVIGATION: Readonly<Record<string, readonly AdminS
 // bookmarks. It never turns old root paths into navigation destinations.
 const legacyAreas: readonly (readonly [string, string])[] = [
   ['/product', '产品研发'], ['/commerce', '商城运营'],
-  ['/production', '生产制造'], ['/vehicle360', '生产制造'],
-  ['/inventory', '库存管理'], ['/logistics', '跨境物流'],
+  ['/production', '供应链管理'], ['/vehicle360', '供应链管理'],
+  ['/inventory', '库存管理'], ['/logistics', '供应链管理'],
   ['/dealers', '经销商管理'], ['/dealer', '经销商管理'], ['/partners', '经销商管理'],
-  ['/supply', '采购管理'], ['/finance', '财务管理'],
+  ['/supply', '供应链管理'], ['/finance', '财务管理'],
   ['/customers', '客户与车主'], ['/after-sales', '售后服务'],
   ['/overview', '经营分析'], ['/settings', '设置'], ['/people', '设置'],
   ['/admin/orders', '商城运营'],

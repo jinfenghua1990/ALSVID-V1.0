@@ -89,6 +89,38 @@ test('Germany route reserves, dispatches, delivers, then requires explicit Inven
   }finally{await db.close();}
 });
 
+
+test('domestic factory-to-warehouse delivery is linked to PO and cannot fake receiving', {skip:!hasDatabase}, async()=>{
+  const db=new Database();
+  try{
+    const auth=await actor(db);
+    const inventory=createInventoryService(db,audit);
+    const logistics=createLogisticsService(db,audit,inventory);
+    const origin=await location(db,auth.userId,'CN','FCT');
+    const destination=await location(db,auth.userId,'CN','CWH');
+    const skuId=await sku(db);
+    const wrongSku=await sku(db);
+    const factoryId=await partner(db,'FACTORY','CN');
+    const po=await db.query<{id:string}>(`INSERT INTO procurement.purchase_orders(supplier_partner_id,currency) VALUES ($1,'CNY') RETURNING id`,[factoryId]);
+    await db.query(`INSERT INTO procurement.purchase_order_lines(purchase_order_id,line_no,item_type,sku_id,ordered_quantity,unit,unit_price) VALUES ($1,10,'SKU',$2,2,'EA',100)`,[po.rows[0]!.id,skuId]);
+    await inventory.postMovement(auth,{movementType:'RECEIPT',itemKind:'SKU',itemId:skuId,unit:'EA',quantity:'2',destinationLocationId:origin.locationId,idempotencyKey:`domestic-seed-${suffix()}`});
+    await inventory.postMovement(auth,{movementType:'RECEIPT',itemKind:'SKU',itemId:wrongSku,unit:'EA',quantity:'1',destinationLocationId:origin.locationId,idempotencyKey:`domestic-wrong-${suffix()}`});
+    const shipment=await logistics.createShipment(auth,{routeType:'FACTORY_TO_DOMESTIC_WAREHOUSE',sourcePurchaseOrderId:po.rows[0]!.id,originLocationId:origin.locationId,destinationLocationId:destination.locationId,transportMode:'ROAD'});
+    const summary=await logistics.summary(auth);
+    assert.equal(summary.shipments.find(s=>s.id===shipment.id)?.source_purchase_order_id,po.rows[0]!.id);
+    await assert.rejects(logistics.allocateCargo(auth,shipment.id,{itemKind:'SKU',itemId:wrongSku,quantity:'1'}),/does not match a purchased SKU/);
+    await logistics.allocateCargo(auth,shipment.id,{itemKind:'SKU',itemId:skuId,quantity:'2'});
+    await logistics.releaseShipment(auth,shipment.id);
+    await logistics.dispatchShipment(auth,shipment.id);
+    await logistics.addMilestone(auth,shipment.id,{eventType:'DEPARTED'});
+    await logistics.addMilestone(auth,shipment.id,{eventType:'DELIVERED_WAREHOUSE'});
+    assert.equal(Number(await inventory.balanceAt({itemKind:'SKU',itemId:skuId,unit:'EA',locationId:destination.locationId})),0);
+    await logistics.receiveWarehouseShipment(auth,shipment.id);
+    assert.equal(Number(await inventory.balanceAt({itemKind:'SKU',itemId:skuId,unit:'EA',locationId:destination.locationId})),2);
+    await assert.rejects(logistics.receiveWarehouseShipment(auth,shipment.id),LogisticsConflictError);
+  }finally{await db.close();}
+});
+
 test('dealer-direct shipment never creates a Germany warehouse receipt', {skip:!hasDatabase}, async()=>{
   const db=new Database();
   try{

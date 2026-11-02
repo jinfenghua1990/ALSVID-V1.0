@@ -25,6 +25,6 @@ test('delivery migration adds domestic route without losing inventory or customs
   const repo=read('../../../../domains/logistics/src/infrastructure/postgres-logistics-repository.ts');
   assert.match(sql,/source_purchase_order_id/);
   assert.match(sql,/FACTORY_TO_DOMESTIC_WAREHOUSE/);
-  assert.match(sql,/Shipment cargo SKU is not a purchased SKU/);
+  assert.match(sql,/Shipment cargo SKU does not match a purchased SKU/);
   assert.match(repo,/sourcePurchaseOrderId/);
 });
