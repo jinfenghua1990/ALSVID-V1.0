@@ -15,8 +15,10 @@ function fixture(options, env = { NODE_ENV: 'production', ALSVID_PUBLIC_RATE_LIM
   // one shared atomic database counter, without connecting to business data.
   const database = new Map();
   const calls = [];
+  let databaseUnavailable = false;
   const identityService = {
     async consumePublicAuthRateLimit(key, windowMs, maximum) {
+      if (databaseUnavailable) throw new Error('Simulated PostgreSQL outage');
       calls.push({ key, windowMs, maximum });
       const count = (database.get(key) ?? 0) + 1;
       database.set(key, count);
@@ -48,7 +50,7 @@ function fixture(options, env = { NODE_ENV: 'production', ALSVID_PUBLIC_RATE_LIM
     };
     return { guard: new Guard(reflector), context, headers };
   };
-  return { make, database, calls };
+  return { make, database, calls, failDatabase() { databaseUnavailable = true; } };
 }
 
 test('sensitive auth endpoints declare PostgreSQL-shared limits instead of relying on in-process Map', () => {
@@ -86,8 +88,7 @@ test('client address and email quotas independently block cross-account mail req
 test('database outage fails closed for a shared limit', async () => {
   const f = fixture({ shared: true, perInstance: 20, windowMs: 3600000 });
   const a = f.make('192.0.2.99', 'test@example.com');
-  const original = a.guard.canActivate(a.context);
-  assert.equal(await original, true);
-  // Ensure the shared path is asynchronous, not the old per-instance Map.
-  assert.equal(typeof original.then, 'function');
+  assert.equal(await a.guard.canActivate(a.context), true);
+  f.failDatabase();
+  await assert.rejects(() => a.guard.canActivate(a.context), /Simulated PostgreSQL outage/);
 });
