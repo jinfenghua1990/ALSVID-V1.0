@@ -30,7 +30,7 @@ test('warehouse provider configuration is audited, permissioned, and never retur
 test('external warehouse and SKU mappings persist as pending until a provider validates them',{skip:!hasDatabase},async()=>{
  const db=new Database();
  try{
-  const auth=await actor(db),commerce=createCommerceService(db,audit),integrations=createIntegrationService(db,audit,commerce),accountRef=`mapping-${suffix().toLowerCase()}`;
+  const auth=await actor(db),integrations=createIntegrationService(db,audit),accountRef=`mapping-${suffix().toLowerCase()}`;
   const connection=await integrations.createWarehouseProviderConnection(auth,{providerCode:'TEST_WMS',displayName:'Test WMS',accountRef,credentialsSecretRef:`projects/alsvid-prod-123/secrets/alsvid-wms-map-${suffix()}/versions/latest`});
   const warehouseRow=await db.query<{id:string}>(`INSERT INTO warehouse.warehouses(code,name,country_code,timezone) VALUES ($1,'Mapping Test Warehouse','DE','Europe/Berlin') RETURNING id`,[`WMS-${suffix()}`]);
   const skuId=await sku(db);
