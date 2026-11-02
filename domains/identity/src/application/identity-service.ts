@@ -210,6 +210,11 @@ export class IdentityService {
     return { token, expiresAt: expiresAt.toISOString(), user: result.user, firstAdminActivated: result.firstAdminActivated };
   }
 
+  /** Shared, atomic transport abuse limit for public authentication endpoints. */
+  async consumePublicAuthRateLimit(bucket: string, windowMs: number, maximum: number): Promise<boolean> {
+    return this.repository.consumeAuthRateLimit(this.tokens.hash(`public-auth:${bucket}`), windowMs, maximum);
+  }
+
   async login(identifier: string, password: string): Promise<{ token: string; expiresAt: string; user: AuthContext }> {
     const normalizedIdentifier = normalizeLoginIdentifier(identifier);
     const allowed = await this.repository.consumeAuthRateLimit(this.tokens.hash(`login:${normalizedIdentifier}`), 15 * 60 * 1000, 5);

@@ -10,6 +10,8 @@ export interface PublicRateLimitOptions {
   /** Instance-wide ceiling so one abuser cannot drain the mail quota. */
   perInstance?: number;
   windowMs: number;
+  /** Enforce every bucket atomically in shared PostgreSQL across all API instances. */
+  shared?: boolean;
 }
 
 /** Marks a public route that needs abuse protection; the guard ignores unmarked routes. */
