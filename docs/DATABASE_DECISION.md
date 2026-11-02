@@ -97,7 +97,7 @@ A separately managed non-production database may be used only for a specific int
 
 # 6. Production data separation
 
-Production data must never be used for destructive testing, migration experiments or seed/reset workflows. Local and CI credentials are separate from Production, and CI does not receive Production secrets.
+Production data must never be used for destructive testing, migration experiments or seed/reset workflows. Ordinary local development and CI use isolated credentials; CI does not receive Production secrets. An explicitly authorized local Production runtime is a separate opt-in mode and shares the same Production Neon/R2 as Cloud Run without running tests, seeds or migrations (see [LOCAL_PRODUCTION.md](LOCAL_PRODUCTION.md)).
 
 `main` changes are validated in CI before deployment. Test data is never copied or promoted to Production.
 
@@ -109,11 +109,18 @@ ALSVID does not become the source system for every business process.
 
 Data ownership:
 
-Shopify:
+ALSVID Commerce (first-party):
 
-- Commerce transactions.
-- Orders.
-- Payments/refunds and storefront transaction facts.
+- Product offerings, first-party storefront order and checkout orchestration, and ALSVID-owned transaction records.
+- Authorized order, customer and payment-event references required for internal operations and after-sales.
+
+Approved payment service provider (PSP):
+
+- Payment processing, provider-side refunds and settlement execution; ALSVID stores verified events and reconciliation facts, not card secrets.
+
+Historical external channels:
+
+- Retired Shopify channel/order records remain available for read-only audit and data lineage. No new Shopify ingestion, replay or channel registration.
 
 WMS:
 
