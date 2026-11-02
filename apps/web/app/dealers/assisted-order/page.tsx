@@ -5,7 +5,7 @@ import { navigationFor } from '../../app-navigation';
 
 const cards = [
   { eyebrow: '经销商', title: '选择经销商', description: '后续从真实 Dealer 主数据选择业务员代服务的经销商。' },
-  { eyebrow: '订单', title: '外部建单', description: '业务员代下单仍调用 Shopify / 获批 B2B 渠道接口，不在 ALSVID 重建结账。' },
+  { eyebrow: '订单', title: '外部建单', description: '业务员代下单须接入获批的 ALSVID Dealer/B2B 订单接口；接入前不得模拟提交正式订单。' },
   { eyebrow: '回写', title: '订单事实回写', description: '外部订单创建成功后，将订单事实同步回 Commerce 工作区。' },
 ] as const;
 
