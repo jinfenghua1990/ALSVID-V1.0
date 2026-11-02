@@ -60,3 +60,26 @@ test('retired subdomain cookie scopes and old framework source locks are forbidd
   assert.ok(source.includes("host.endsWith('.alsvidbike.com')"));
   assert.equal(exists('docs/COMMERCE_SOURCE_LOCK.json'), false);
 });
+
+test('retired Shopify runtime cannot accept or replay orders or create new channels', () => {
+  const api = read('apps/api/src/integrations.controller.ts');
+  const service = read('domains/integrations/src/application/integration-service.ts');
+  const factory = read('domains/integrations/src/infrastructure/index.ts');
+  const commerce = read('domains/commerce/src/application/commerce-service.ts');
+  const ui = read('apps/web/app/commerce/commerce-client.tsx');
+  const env = read('.env.example');
+  const integrationPkg = read('domains/integrations/package.json');
+  for (const [name,source] of [['API',api],['integration service',service],['commerce UI',ui]]) {
+    assert.doesNotMatch(source, /\/v1\/integrations\/shopify|@Post\\(['"]shopify|ingestShopify|replayShopify/, name);
+  }
+  assert.ok(!exists('domains/integrations/src/infrastructure/shopify-normalizer.ts'));
+  assert.ok(!exists('domains/integrations/src/infrastructure/sha256-evidence-hasher.ts'));
+  assert.doesNotMatch(factory, /ShopifyNormalizer|CommerceIngestionPort/);
+  assert.match(commerce, /input.provider!=='AMAZON'&&input.provider!=='OTHER'/);
+  assert.doesNotMatch(ui, /<option value="SHOPIFY">|SHOPIFY ADAPTER|onSubmit=\\{ingestShopify\\}|>重放<\/button>/);
+  assert.doesNotMatch(env, /SHOPIFY_SHOP_DOMAIN|SHOPIFY_ACCESS_TOKEN|ALSVID_SHOPIFY_FC1_PRODUCT_URL/);
+  assert.doesNotMatch(integrationPkg, /@alsvid\\/commerce/);
+  // Deployed historical data and audit evidence are retained, not destroyed.
+  assert.ok(exists('packages/database/migrations/0015_shopify_delivery_metadata.sql'));
+  assert.match(read('domains/integrations/src/infrastructure/postgres-integration-repository.ts'), /SELECT r\\.\\*,c\\.provider/);
+});
