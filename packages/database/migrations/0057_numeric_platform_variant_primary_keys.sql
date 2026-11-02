@@ -94,7 +94,6 @@ ALTER TABLE product.models ADD COLUMN platform_number bigint;
 UPDATE product.models m SET platform_number=p.platform_number
  FROM product.platforms p WHERE p.id=m.platform_id;
 ALTER TABLE product.models
- ALTER COLUMN platform_number SET NOT NULL,
  ADD CONSTRAINT models_platform_number_fk FOREIGN KEY(platform_number)
    REFERENCES product.platforms(platform_number) ON DELETE RESTRICT;
 
@@ -110,6 +109,11 @@ ALTER TABLE product.skus
 CREATE OR REPLACE FUNCTION product.sync_model_platform_number()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
+ -- Accessory and service-part products intentionally have no technical platform.
+ IF NEW.platform_id IS NULL THEN
+   NEW.platform_number := NULL;
+   RETURN NEW;
+ END IF;
  SELECT p.platform_number INTO NEW.platform_number
  FROM product.platforms p WHERE p.id=NEW.platform_id;
  IF NEW.platform_number IS NULL THEN
