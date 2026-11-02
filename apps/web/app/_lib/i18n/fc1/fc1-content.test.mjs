@@ -100,7 +100,13 @@ test("FC1 public preview copy does not claim paid preorder, stock or Shopify che
     assert.doesNotMatch(globalCopy["detail.accessory_body"], /Shopify/i);
   }
   const configurator = await readFile(path.join(directory, "../../../_components/product/fc1-colour-configurator.tsx"), "utf8");
-  assert.doesNotMatch(configurator, /fetch\("\/api\/public\/fc1-colour-interest"/);
+  assert.match(configurator, /fetch\("\/api\/public\/fc1-colour-interest"/);
+  assert.match(configurator, /const saveColourPreference = async \(\) =>/);
+  assert.match(configurator, /onClick=\{\(\)=>void saveColourPreference\(\)\}/);
+  assert.match(configurator, /productCode:"A1-ULTRA"/);
+  assert.match(configurator, /window\.sessionStorage/);
+  assert.match(configurator, /Preview choices|Browsing colours remains local/);
+  assert.doesNotMatch(configurator, /useEffect\(\(\) => \{[^}]*saveColourPreference/s);
   assert.doesNotMatch(configurator, /copy\.soldOut|setSaveState|saveFc1PreviewCart/);
   assert.match(configurator, /copy\.proposal/);
   const css = await readFile(path.join(directory, "../../../_components/product/fc1-product.module.css"), "utf8");

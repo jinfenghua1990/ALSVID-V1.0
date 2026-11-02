@@ -29,6 +29,11 @@ const COPY = {
     proposal: "颜色提案 · 待确认",
     choose: "选择你喜欢的颜色",
     interest: "颜色仅用于外观参考，不代表现货或量产色号。",
+    preferenceSave: "保存我的颜色偏好",
+    preferenceSaving: "正在保存…",
+    preferenceSaved: "已保存匿名颜色偏好（不是订单）",
+    preferenceFailed: "保存失败，请重试",
+    preferenceNote: "仅点击保存时才记录本次浏览会话的车型与颜色，不收集姓名或邮箱。",
     title: "选择你的 A1 Ultra",
     fineprint: "颜色为基于绿色实拍车的模拟效果，量产色号与可售状态以正式公布为准。",
     summary: "当前预览",
@@ -47,6 +52,11 @@ const COPY = {
     proposal: "Colour proposal · unconfirmed",
     choose: "Choose your favourite colour",
     interest: "Colours are appearance proposals, not confirmed stock or production finishes.",
+    preferenceSave: "Save my colour preference",
+    preferenceSaving: "Saving…",
+    preferenceSaved: "Anonymous preference saved (not an order)",
+    preferenceFailed: "Could not save. Please retry.",
+    preferenceNote: "Only clicking Save records the model and colour for this browser session, without name or email.",
     title: "Make your A1 Ultra yours",
     fineprint: "Colours are simulations based on the genuine green sample. Final finishes and availability are not confirmed.",
     summary: "Your preview",
@@ -65,6 +75,11 @@ const COPY = {
     proposal: "Farbvorschlag · noch offen",
     choose: "Wähle deine Lieblingsfarbe",
     interest: "Farben sind Designvorschläge, keine bestätigten Serienfarben oder Lagerbestände.",
+    preferenceSave: "Farbwunsch speichern",
+    preferenceSaving: "Wird gespeichert…",
+    preferenceSaved: "Anonymer Farbwunsch gespeichert (keine Bestellung)",
+    preferenceFailed: "Speichern fehlgeschlagen. Bitte erneut versuchen.",
+    preferenceNote: "Nur beim Speichern werden Modell und Farbe für diese Browsersitzung erfasst, ohne Namen oder E-Mail.",
     title: "Gestalte dein A1 Ultra",
     fineprint: "Farbansichten sind Simulationen des echten grünen Musters. Serienfarben und Verfügbarkeit sind noch nicht bestätigt.",
     summary: "Deine Vorschau",
@@ -179,6 +194,7 @@ export function Fc1ColourConfigurator({locale}: {locale: Locale}) {
   const [email, setEmail] = useState("");
   const [reservationState, setReservationState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
   const [cartStatus,setCartStatus]=useState<"idle"|"added"|"failed">("idle");
+  const [preferenceStatus,setPreferenceStatus]=useState<"idle"|"saving"|"saved"|"failed">("idle");
 
   const onModelFailure = useCallback(() => {
     setVisualMode("photo");
@@ -206,11 +222,29 @@ export function Fc1ColourConfigurator({locale}: {locale: Locale}) {
   const colourLabel = t(current.key as "fc1.colours.sample");
   const submitReservation = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setReservationState("sending"); try { const response = await fetch("/api/public/fc1-reservation", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, model: modelLabel, colour: colourLabel, locale }) }); if (!response.ok) throw new Error("send failed"); setReservationState("sent"); } catch { setReservationState("failed"); } };
 
-  // Preview choices are local UI state. Only sending an email expresses reservation interest.
-  const chooseColour = (next: ColourId) => {setColour(next);setCartStatus("idle");};
+  // Browsing colours remains local. Persist a pseudonymous preference only after a separate opt-in click.
+  const saveColourPreference = async () => {
+    setPreferenceStatus("saving");
+    try {
+      const storageKey = "alsvid-a1-ultra-colour-preference-session";
+      const sessionKey = window.sessionStorage.getItem(storageKey) ?? window.crypto.randomUUID();
+      window.sessionStorage.setItem(storageKey, sessionKey);
+      const response = await fetch("/api/public/fc1-colour-interest", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({productCode:"A1-ULTRA",sessionKey,modelCode:model,colourCode:colour,locale}),
+      });
+      if (!response.ok) throw new Error("Preference was not saved");
+      setPreferenceStatus("saved");
+    } catch {
+      setPreferenceStatus("failed");
+    }
+  };
+  const chooseColour = (next: ColourId) => {setColour(next);setCartStatus("idle");setPreferenceStatus("idle");};
   const chooseModel = (next: ModelId) => {
     setModel(next);
     setCartStatus("idle");
+    setPreferenceStatus("idle");
     setExpandedModel(previous => previous === next ? null : next);
   };
   return <div id="configure" className={styles.interestConfigurator}>
@@ -272,6 +306,8 @@ export function Fc1ColourConfigurator({locale}: {locale: Locale}) {
           </button>)}
         </div>
         <p className={styles.interestHint}>{copy.interest}</p>
+        <button type="button" className={styles.interestReservationButton} onClick={()=>void saveColourPreference()} disabled={preferenceStatus==="saving"}>{preferenceStatus==="saving"?copy.preferenceSaving:copy.preferenceSave}</button>
+        <p className={styles.interestHint} role="status">{preferenceStatus==="saved"?copy.preferenceSaved:preferenceStatus==="failed"?copy.preferenceFailed:copy.preferenceNote}</p>
       </fieldset>
       <div className={styles.interestSummary}>
         <small>{copy.summary}</small><strong>A1 Ultra {model==="standard"?"Standard":"Pro"} / {t(current.key as "fc1.colours.sample")}</strong>

@@ -67,10 +67,10 @@ export function HomePage({
           </div>
           <div className={styles["home-product-grid"]}>
             {[
-              { code: "FC1", name: t("product.model_fc1"), platform: t("platform.fc.title"), image: "/home/original/fc1-product.webp", alt: t("images.product"), href: detail("fc1"), modelId: productBindings?.FC1_FEATURED ?? productBindings?.FC1_HERO ?? undefined },
-              { code: "FC2", name: t("fc2.model"), platform: t("platform.fc.title"), image: "/products/fc2/side-studio-1536.webp", alt: t("fc2.gallery.alt.side"), href: detail("fc2"), modelId: productBindings?.FC2_LAUNCH ?? undefined },
-              { code: "L7", name: t("l7.model"), platform: t("platform.fc.title"), image: "/products/l7/reference-side.jpg", alt: t("l7.gallery.side.alt"), href: detail("l7"), modelId: undefined },
-              { code: "L8", name: t("l8.model"), platform: t("platform.fc.title"), image: "/products/l8/retouched-side.webp", alt: t("l8.gallery.side.alt"), href: detail("l8"), modelId: undefined },
+              { code: "A1-ULTRA", name: t("product.model_fc1"), platform: t("platform.fc.title"), image: "/home/original/fc1-product.webp", alt: t("images.product"), href: detail("fc1"), modelId: productBindings?.FC1_FEATURED ?? productBindings?.FC1_HERO ?? undefined },
+              { code: "L1-PRO", name: t("fc2.model"), platform: t("platform.fc.title"), image: "/products/fc2/side-studio-1536.webp", alt: t("fc2.gallery.alt.side"), href: detail("fc2"), modelId: productBindings?.FC2_LAUNCH ?? undefined },
+              { code: "A1", name: t("l7.model"), platform: t("platform.fc.title"), image: "/products/l7/reference-side.jpg", alt: t("l7.gallery.side.alt"), href: detail("l7"), modelId: undefined },
+              { code: "L1", name: t("l8.model"), platform: t("platform.fc.title"), image: "/products/l8/retouched-side.webp", alt: t("l8.gallery.side.alt"), href: detail("l8"), modelId: undefined },
             ].map(product => (
               <article className={styles["home-product-card"]} key={product.code} data-product-model-id={product.modelId}>
                 <a href={product.href} className={styles["home-product-image"]} aria-label={product.name}>
