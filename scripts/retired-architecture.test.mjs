@@ -126,3 +126,17 @@ test('local Production refuses untracked source files that Docker would otherwis
   assert.ok(localScript.includes("'--untracked-files=normal'"), 'Production Docker build must reject unexpected untracked source files');
   assert.ok(!localScript.includes("'--untracked-files=no'"), 'Untracked source files must not bypass the clean checkout gate');
 });
+
+test('auto-merge controller does not create duplicate CI/Production deploys or fail after a concurrent merge', () => {
+  const workflow = read('.github/workflows/auto-merge.yml');
+  assert.ok(workflow.includes('if ! gh pr merge "$number" --squash --auto --match-head-commit "$CI_HEAD_SHA"; then'),
+    'Concurrent native GitHub merge must be checked before reporting failure');
+  assert.ok(workflow.includes('.merged == true and .head.sha == $sha'),
+    'Only the same reviewed head may be treated as already merged');
+  assert.ok(workflow.includes('actions/runs?head_sha=$merged_sha&event=push&per_page=100'),
+    'A successful merge must check existing push CI by exact SHA');
+  assert.ok(workflow.includes('if [[ "$push_ci_count" != "0" ]]; then'),
+    'Do not create a redundant main CI when a push CI already exists');
+  assert.ok(workflow.includes('gh workflow run ci.yml --ref main -f deploy_production=true'),
+    'Retain explicit main CI fallback for GITHUB_TOKEN merges that suppress push triggers');
+});
