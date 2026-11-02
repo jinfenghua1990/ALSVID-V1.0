@@ -120,3 +120,9 @@ test('local gateway forwards every Next.js BFF API route to Web and preserves Ne
   assert.ok(gateway.includes('location /api/ {\n    proxy_pass $api_upstream;'),
     'NestJS /api/v1/* must still use the API upstream');
 });
+
+test('local Production refuses untracked source files that Docker would otherwise package', () => {
+  const localScript = read('scripts/local-production.mjs');
+  assert.ok(localScript.includes("'--untracked-files=normal'"), 'Production Docker build must reject unexpected untracked source files');
+  assert.ok(!localScript.includes("'--untracked-files=no'"), 'Untracked source files must not bypass the clean checkout gate');
+});
