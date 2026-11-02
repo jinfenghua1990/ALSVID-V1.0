@@ -1,3 +1,5 @@
+> **Owner decision, 2026-11-02:** The Shopify runtime adapter is retired: no new Shopify channels, webhook ingestion/replay, checkout dependency or second business database. Historical external records and migrations are retained read-only. Do not derive current implementation from archived Shopify-first documents. See [retirement boundary](SHOPIFY_RETIREMENT_2026-11-02.md).
+
 # ALSVID AI Context
 
 ## Purpose
