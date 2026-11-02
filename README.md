@@ -1,3 +1,5 @@
+> **2026-11-02 Shopify 运行功能退役：** ALSVID 官网商城与订单由自建 Commerce 管理。Shopify Webhook 接收/重放、后台写入表单与配置入口已从代码中移除；历史数据库迁移、外部订单与审计凭证不做破坏性删除。参见 [清理边界](docs/SHOPIFY_RETIREMENT_2026-11-02.md)。
+
 # ALSVID
 
 > **新增可选本地正式运行方式（2026-11-02）**：保留 Google Cloud Run 作为现有线上运行位置；获授权的本地电脑/NAS 可以通过 [本地运行说明](docs/LOCAL_PRODUCTION.md) 启动同一 ALSVID Web/API，连接既有 Neon Production 数据库、Cloudflare R2 和统一身份，不建立第二套业务数据。普通员工仍优先使用现有 HTTPS 门户，不向员工设备下发数据库或 R2 密钥。本地实机部署及员工联动尚未验收。
