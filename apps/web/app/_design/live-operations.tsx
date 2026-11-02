@@ -73,7 +73,7 @@ export function LiveWorkbench() {
         <div>
           <h2 className="av-cardtitle">业务数据 · 已接入系统</h2>
           <p className="av-cardhint">
-            读取现有 ALSVID 领域 API；不使用设计示例数据，不代表 Shopify 或 WMS 实时数据。
+            读取现有 ALSVID 领域 API；不使用设计示例数据，不代表任何外部平台或 WMS 实时数据。
           </p>
         </div>
         <div className="av-toolbar">

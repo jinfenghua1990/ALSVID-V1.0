@@ -53,7 +53,7 @@ export function assessExternalOrder(row:ReadyRow):ExternalOrderReadiness {
  if(lineCount===0)blockers.push('没有真实订单商品行');
  if(unmappedLines>0)blockers.push('仍有商品未绑定 ALSVID SKU');
  if(!row.customer_partner_id)blockers.push('客户 Partner 尚未人工核验');
- // Shopify financial_status, even PAID, is a provider-reported *order* field,
+ // External provider financial_status, even PAID, is a provider-reported *order* field,
  // not an authenticated PSP capture/settlement tied to this internal order.
  blockers.push('没有独立支付机构核验的付款事实');
  return {orderId:row.id,orderName:row.external_order_name||row.external_order_id,

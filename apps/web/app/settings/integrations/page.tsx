@@ -5,7 +5,7 @@ import { navigationFor } from '../../app-navigation';
 import IntegrationsAdminClient from './integrations-admin-client';
 
 const cards = [
-  { eyebrow: 'Commerce', title: 'Shopify / Amazon', description: '查看外部销售渠道的适配器状态与业务边界，密钥不在页面展示。' },
+  { eyebrow: 'Commerce', title: '外部销售渠道（仅获批渠道）', description: '查看外部销售渠道的适配器状态与业务边界，密钥不在页面展示。' },
   { eyebrow: 'Storage', title: '对象存储', description: '后续展示 R2 等对象存储 Provider 的非敏感配置状态。' },
   { eyebrow: 'Infrastructure', title: '外部服务', description: '集中展示已批准的第三方服务连接状态、职责和健康检查入口。' },
 ] as const;

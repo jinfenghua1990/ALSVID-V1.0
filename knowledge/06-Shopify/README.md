@@ -1,3 +1,5 @@
+> **已退役（2026-11-02）**：此目录只保留历史决策，不再作为未来预留集成的实施清单。正式代码删除了 Shopify 接收、重放和新建渠道功能；禁止根据此处旧提案恢复。历史交易及审计记录仅作保留查询，不做数据库删除。依据 [运行退役说明](../../docs/SHOPIFY_RETIREMENT_2026-11-02.md)。
+
 # Shopify（历史资料 / 非首期依赖）
 
 > **当前状态（2026-10-22）：** 本目录仅保留旧 Shopify-first 规划和未来可选外部渠道参考。首期 B2C 商品目录、购物袋、订单与结账按 ALSVID 自建 Commerce 设计，支付由获批 PSP 处理；My ALSVID 使用 ALSVID 自有身份方案。依据 [ADR 0005](../../docs/adr/0005-alsvid-owned-storefront-and-third-party-payments.md) 与 [ADR 0006](../../docs/adr/0006-first-party-portal-auth-and-login-experience.md)。除非负责人重新明确批准，不得将本目录中的旧方案当成当前实施要求。

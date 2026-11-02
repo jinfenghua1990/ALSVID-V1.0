@@ -50,7 +50,7 @@ export const commerceOrderOperationsService = new CommerceOrderOperationsService
 export const storefrontOrderService = new StorefrontOrderService(database, auditService);
 export const storefrontLayoutService = new StorefrontLayoutService(database, auditService);
 export const storefrontReadinessService = new StorefrontReadinessService(database);
-export const integrationService = createIntegrationService(database, auditService, commerceService);
+export const integrationService = createIntegrationService(database, auditService);
 export const financeService = createFinanceService(database, auditService);
 
 export const comparisonCatalogService: ComparisonCatalogService = createComparisonCatalogService(database, auditService);

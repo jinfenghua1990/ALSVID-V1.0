@@ -60,3 +60,33 @@ test('retired subdomain cookie scopes and old framework source locks are forbidd
   assert.ok(source.includes("host.endsWith('.alsvidbike.com')"));
   assert.equal(exists('docs/COMMERCE_SOURCE_LOCK.json'), false);
 });
+
+test('retired Shopify runtime cannot accept or replay orders or create new channels', () => {
+  const api = read('apps/api/src/integrations.controller.ts');
+  const service = read('domains/integrations/src/application/integration-service.ts');
+  const factory = read('domains/integrations/src/infrastructure/index.ts');
+  const commerce = read('domains/commerce/src/application/commerce-service.ts');
+  const ui = read('apps/web/app/commerce/commerce-client.tsx');
+  const env = read('.env.example');
+  const integrationPkg = read('domains/integrations/package.json');
+  for (const [name, source] of [['API',api],['integration service',service],['commerce UI',ui]]) {
+    for (const retired of ['integrations/shopify/', 'ingestShopify', 'replayShopify']) {
+      assert.ok(!source.includes(retired), name + ' must not use ' + retired);
+    }
+  }
+  assert.equal(exists('domains/integrations/src/infrastructure/shopify-normalizer.ts'), false);
+  assert.equal(exists('domains/integrations/src/infrastructure/sha256-evidence-hasher.ts'), false);
+  assert.ok(!factory.includes('ShopifyNormalizer'));
+  assert.ok(!factory.includes('CommerceIngestionPort'));
+  assert.ok(commerce.includes("input.provider!=='AMAZON'&&input.provider!=='OTHER'"));
+  for (const retired of ['<option value="SHOPIFY">', 'SHOPIFY ADAPTER', 'onSubmit={ingestShopify}', '>重放</button>']) {
+    assert.ok(!ui.includes(retired), 'retired UI: ' + retired);
+  }
+  for (const retired of ['SHOPIFY_SHOP_DOMAIN', 'SHOPIFY_ACCESS_TOKEN', 'ALSVID_SHOPIFY_FC1_PRODUCT_URL']) {
+    assert.ok(!env.includes(retired), 'retired env: ' + retired);
+  }
+  assert.ok(!integrationPkg.includes('@alsvid/commerce'));
+  // Historic evidence and schema are retained, not dropped.
+  assert.ok(exists('packages/database/migrations/0015_shopify_delivery_metadata.sql'));
+  assert.ok(read('domains/integrations/src/infrastructure/postgres-integration-repository.ts').includes('SELECT r.*,c.provider'));
+});

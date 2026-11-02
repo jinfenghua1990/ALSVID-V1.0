@@ -1,11 +1,12 @@
-import type{NormalizedFulfillment,NormalizedOrder}from'@alsvid/commerce';import type{QueryExecutor}from'@alsvid/database';import type{CreateExternalSkuMappingInput,CreateExternalWarehouseMappingInput,CreateWarehouseProviderConnectionInput,IngestionOutcome,ShopifyDeliveryInput}from'../core/model.js';
+import type{CreateExternalSkuMappingInput,CreateExternalWarehouseMappingInput,CreateWarehouseProviderConnectionInput}from'../core/model.js';
 export interface IntegrationActor{userId:string;permissions:readonly string[]}
-export interface IntegrationAuditPort{record(input:{actorUserId:string;action:string;targetType:string;targetId:string;metadata?:Record<string,unknown>},executor?:QueryExecutor):Promise<void>}
-export interface CommerceIngestionPort{ingestOrder(actor:IntegrationActor,channelId:string,providerEventId:string,input:NormalizedOrder,executor:QueryExecutor):Promise<{order:any;applied:boolean}>;ingestFulfillment(actor:IntegrationActor,channelId:string,providerEventId:string,input:NormalizedFulfillment,executor:QueryExecutor):Promise<{fulfillment:any;applied:boolean}>}
-export interface ShopifyNormalizerPort{order(payload:Record<string,unknown>):NormalizedOrder;fulfillment(payload:Record<string,unknown>,topic:string):NormalizedFulfillment}
-export interface EvidenceHasherPort{sha256(value:unknown):string}
+export interface IntegrationAuditPort{record(input:{actorUserId:string;action:string;targetType:string;targetId:string;metadata?:Record<string,unknown>}):Promise<void>}
+// Read-only historical delivery evidence is retained for audit integrity.
 export interface IntegrationRepository{
- transaction<T>(work:(e:QueryExecutor)=>Promise<T>):Promise<T>;summary():Promise<any>;warehouseProviderSummary():Promise<any>;createWarehouseProviderConnection(input:CreateWarehouseProviderConnectionInput & {connectionStatus:'NOT_CONFIGURED'|'PENDING_REVIEW';actorUserId:string}):Promise<any>;createExternalWarehouseMapping(input:CreateExternalWarehouseMappingInput & {connectionId:string;actorUserId:string}):Promise<any>;createExternalSkuMapping(input:CreateExternalSkuMappingInput & {connectionId:string;actorUserId:string}):Promise<any>;receiptForReplay(id:string):Promise<any|null>;channel(id:string):Promise<any|null>;setCursor(input:{channelId:string;cursorKey:string;cursorValue:string;sourceUpdatedAt:string|null;actorUserId:string}):Promise<any>;
- insertReceipt(input:{channelId:string;webhookId:string;eventId:string|null;apiVersion:string|null;shopDomain:string;topic:string;payloadHash:string;payload:Record<string,unknown>;triggeredAt:string|null}):Promise<any|null>;receiptByProviderId(channelId:string,webhookId:string):Promise<any|null>;
- lockReceipt(id:string,e:QueryExecutor):Promise<void>;latestAttempt(id:string,e:QueryExecutor):Promise<any|null>;recordAttempt(input:{receiptId:string;outcome:IngestionOutcome;actorUserId:string;normalizedEntityType?:string;normalizedEntityId?:string;errorCode?:string;message?:string},e:QueryExecutor):Promise<any>;
+ summary():Promise<any>;
+ warehouseProviderSummary():Promise<any>;
+ createWarehouseProviderConnection(input:CreateWarehouseProviderConnectionInput & {connectionStatus:'NOT_CONFIGURED'|'PENDING_REVIEW';actorUserId:string}):Promise<any>;
+ createExternalWarehouseMapping(input:CreateExternalWarehouseMappingInput & {connectionId:string;actorUserId:string}):Promise<any>;
+ createExternalSkuMapping(input:CreateExternalSkuMappingInput & {connectionId:string;actorUserId:string}):Promise<any>;
+ setCursor(input:{channelId:string;cursorKey:string;cursorValue:string;sourceUpdatedAt:string|null;actorUserId:string}):Promise<any>;
 }
