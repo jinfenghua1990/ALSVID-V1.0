@@ -1,8 +1,26 @@
 import{postgresErrorCode}from'@alsvid/database';import{ForbiddenError}from'@alsvid/kernel';
-import{ProductionCapability,type CreateProductionOrderInput,type ProductionDeviationInput,type ProductionSummary,type QcInspectionInput}from'../core/model.js';import{ProductionConflictError,ProductionNotFoundError,ProductionValidationError}from'../core/errors.js';import{assertQcResult,positiveProductionDecimal,positiveProductionInteger}from'../core/validation.js';import type{ProductionActor,ProductionAuditPort,ProductionRepository}from'./ports.js';
+import{ProductionCapability,type CreateProductionOrderInput,type ProductionDeviationInput,type ProductionSummary,type QcInspectionInput}from'../core/model.js';import{ProductionConflictError,ProductionNotFoundError,ProductionValidationError}from'../core/errors.js';import{assertQcResult,positiveProductionDecimal,positiveProductionInteger}from'../core/validation.js';import type{ProductionActor,ProductionAuditPort,ProductionInventoryPort,ProductionRepository}from'./ports.js';
 export class ProductionService{
- constructor(private readonly repository:ProductionRepository,private readonly audit:ProductionAuditPort){}
+ constructor(private readonly repository:ProductionRepository,private readonly audit:ProductionAuditPort,private readonly inventory?:ProductionInventoryPort){}
  async summary(actor:ProductionActor):Promise<ProductionSummary>{requireCapability(actor,ProductionCapability.Read);return this.repository.summary()}
+ async receiveFinishedGoods(actor:ProductionActor,orderId:string,input:{locationId:string;quantity:number;note?:string}):Promise<any>{
+  requireCapability(actor,ProductionCapability.Release);
+  if(!actor.permissions.includes('inventory.move'))throw new ForbiddenError('PRODUCTION_INVENTORY_FORBIDDEN','Missing permission: inventory.move');
+  if(!this.inventory)throw new ProductionConflictError('Production inventory integration is not configured');
+  if(!Number.isSafeInteger(input?.quantity)||input.quantity<=0||!input.locationId)throw new ProductionValidationError('Factory receipt requires a valid warehouse and positive integer quantity');
+  return this.repository.transaction(async e=>{
+    const order=await this.repository.lockFactoryOrder(orderId,e);
+    if(!order)throw new ProductionNotFoundError('Production order not found');
+    if(order.status!=='COMPLETED')throw new ProductionConflictError('Factory receiving requires completed and QC-passed production');
+    if(!await this.repository.verifyFactoryLocation(input.locationId,order.factory_partner_id,e))throw new ProductionValidationError('Choose an active factory-managed China warehouse');
+    const already=await this.repository.receivedFactoryQuantity(orderId,e);
+    if(already+input.quantity>Number(order.planned_quantity))throw new ProductionConflictError('Factory received quantity cannot exceed completed quantity');
+    const movement=await this.inventory.postMovement(actor,{movementType:'RECEIPT',itemKind:'SKU',itemId:order.sku_id,unit:'EA',quantity:String(input.quantity),destinationLocationId:input.locationId,referenceType:'PRODUCTION_ORDER',referenceId:orderId,reason:input.note?.trim()||'Verified factory finished-goods physical receipt',idempotencyKey:`factory-finished:${orderId}:${already}:${input.quantity}`,correlationId:orderId},e);
+    await this.repository.addFactoryReceipt(orderId,input.locationId,input.quantity,movement.id,actor.userId,e);
+    await this.audit.record({actorUserId:actor.userId,action:'production.factory_finished_goods_received',targetType:'production.order',targetId:orderId,metadata:{quantity:input.quantity,locationId:input.locationId}},e);
+    return {received:input.quantity,totalReceived:already+input.quantity,remaining:Number(order.planned_quantity)-already-input.quantity};
+  })
+ }
  async createOrder(actor:ProductionActor,input:CreateProductionOrderInput):Promise<any>{requireCapability(actor,ProductionCapability.Write);positiveProductionInteger(input.plannedQuantity,'plannedQuantity');if(!input.buildSpecId||!input.factoryPartnerId)throw new ProductionValidationError('buildSpecId and factoryPartnerId are required');if(input.sourceStorefrontOrderLineId&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.sourceStorefrontOrderLineId))throw new ProductionValidationError('sourceStorefrontOrderLineId must be a valid UUID');try{const row=await this.repository.createOrder({...input,actorUserId:actor.userId});await this.audit.record({actorUserId:actor.userId,action:'production.order_created',targetType:'production.order',targetId:row.id});return row}catch(error){const message=error instanceof Error?error.message:'';if(message.includes('released Build Specification'))throw new ProductionValidationError('Production Order requires a released Build Specification');if(message.includes('FACTORY Partner role'))throw new ProductionValidationError('Selected Partner is not a Factory');if(message.includes('source purchase order'))throw new ProductionValidationError(message);if(message.includes('storefront order')||message.includes('Production demand')||message.includes('Verified PSP evidence')||message.includes('Production quantity must match'))throw new ProductionValidationError(message);if(postgresErrorCode(error)==='23503')throw new ProductionNotFoundError('Build Specification, Factory or source PO not found');throw error}}
  async createFromStorefrontOrder(actor:ProductionActor,orderId:string,factoryPartnerId:string):Promise<any[]>{
   requireCapability(actor,ProductionCapability.Write);
