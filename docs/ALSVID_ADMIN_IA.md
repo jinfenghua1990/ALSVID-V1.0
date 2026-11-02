@@ -97,6 +97,6 @@
 
 旧「更多模块 → 商城方案对比」和 `/admin/commerce-lab` 实验入口已从现役 Admin 导航退役；历史说明仅保留供追溯，不能再把它当作当前可访问功能。见 [历史比较区说明](COMMERCE_COMPARISON_LAB_2026-10-26.md)。
 
-旧 AppShell 导航 `apps/web/app/app-navigation.ts` **仍被真实旧页面调用**：`OperationsFrame`、`/overview`、`/vehicle360`、`/partners` 等。不得按“仅测试引用”删除。现役 `/admin` 导航在 `apps/web/app/_design/renderer.tsx`。两套导航的真正收敛，需要将旧页面的业务功能迁移到 `/admin` 并完成生产 UAT 后逐页处理。
+旧 AppShell 的菜单配置已经统一到 `apps/web/app/_design/admin-navigation.ts`；原 `app-navigation.ts` 已删除。旧受保护业务页面仍可供历史书签访问，其业务组件通过 `/admin` 的集成工作区复用。页面本身是否退役，以实际业务 UAT 为准。
 
 2026-11-02 后续清理：已退役 `LiveWorkbenchTodos`、`P0OperationsCenter` 的页面组件不再渲染；其独立数据解析契约和旧组件专用测试也随之退出构建，现役业务 API 仍由专门的 Admin/API 测试检查。不能用删除演示看板替代业务操作闭环验收。
