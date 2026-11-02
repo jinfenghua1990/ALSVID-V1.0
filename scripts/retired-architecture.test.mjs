@@ -34,6 +34,13 @@ test('retired parallel frameworks cannot be reintroduced into ALSVID production'
     'apps/web/app/admin/workbench.module.css',
     'apps/web/app/_design/live-operations.tsx',
     'apps/web/app/_design/live-operations.json',
+    'apps/web/app/admin-preview/page.tsx',
+    'apps/web/public/admin-preview',
+    'apps/web/app/_experiments/commerce-lab/crmeb-catalog.ts',
+    'apps/web/app/_experiments/commerce-lab/crmeb-catalog.test.mjs',
+    'apps/web/app/_experiments/commerce-lab/catalog.server.ts',
+    'apps/web/app/_experiments/commerce-lab/catalog-panel.tsx',
+    'apps/web/app/_experiments/commerce-lab/catalog-panel.module.css',
   ];
   for (const path of removed) assert.equal(exists(path), false, 'Retired path revived: ' + path);
   const source = read('apps/web/app/_design/renderer.tsx');

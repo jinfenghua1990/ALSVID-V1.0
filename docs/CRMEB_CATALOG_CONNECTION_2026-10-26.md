@@ -1,3 +1,9 @@
+# Historical reference (retired 2026-11-02)
+
+The experimental CRMEB read-only catalog adapter and its preview panel were removed. ALSVID now uses its own PostgreSQL-backed catalog; do not configure `CRMEB_LAB_ORIGIN` or `CRMEB_LAB_PUBLIC_CATALOG` or reactivate a parallel CRMEB runtime. This record is retained only as migration history.
+
+---
+
 # CRMEB 独立商品接口试接
 
 状态：只读适配代码；无原生 Medusa / CRMEB 引擎部署证明。所属交付为独立商城比较区，关联本 PR。

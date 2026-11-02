@@ -13,12 +13,12 @@ The authoritative decision record is ADR 0003.
 | Artifact | Authority | Holds |
 | --- | --- | --- |
 | Software program | GitHub | source, contracts, migrations, infrastructure definitions, CI |
-| Runtime environment | Google Cloud Run | the running Web / API / Worker processes |
+| Runtime environment | authorized local Docker and existing Google Cloud Run | Web/API processes at more than one location, using one business data authority |
 | Business database | Neon PostgreSQL | authoritative structured business facts |
 | Business files | Cloudflare R2 | binary objects only (images, documents, attachments) |
 | Passwords and configuration | Google Cloud Secret Manager | production credentials and configuration secrets |
-| Logs | Google Cloud Logging | runtime and application logs |
-| Backup | GitHub + Neon/database backup + R2 + Q4 | code history, database dumps, object copies, offline copy |
+| Logs | Cloud Logging (Cloud Run) and Docker logs (local) | runtime-specific observability |
+| Backup | GitHub + verified Neon/database backup + R2 + approved independent backup | code history, database recovery and object copies |
 
 ## Software program — GitHub
 
@@ -29,9 +29,9 @@ reproducible from a Git commit SHA.
 - No production fix is applied by editing a running container.
 - Release identity is a commit SHA, not a folder name or a timestamp.
 
-## Runtime environment — Google Cloud Run
+## Runtime environment — local-first applications plus existing Cloud Run
 
-Cloud Run is the selected runtime platform for Web, API and Worker containers.
+ALSVID supports authorized local Docker Web/API/Gateway business runtimes connected to the same Production Neon PostgreSQL, R2 and centrally managed secrets. Cloud Run continues as an existing public HTTPS Web/API location; moving the public entrypoint is a separate acceptance decision. Do not assume local deployment has been tested or a public cutover completed. See `docs/LOCAL_PRODUCTION.md`.
 
 - The platform runs the software; it does not own business rules.
 - Application code stays provider-neutral so it can also run locally, on a VPS or on a home server
@@ -49,7 +49,7 @@ Neon is the selected managed PostgreSQL provider for ALSVID production structure
 - The production database is managed infrastructure and is never hosted on a personal computer.
 - A future PostgreSQL provider change must not require rewriting Domain rules.
 
-Selecting Neon records the production provider decision; it does not mean a live Neon project has already been provisioned. Live resource creation and restore evidence remain deployment acceptance work under Issue #34.
+Live Neon connectivity and backup/restore readiness require direct provider and operational verification; source code alone does not establish their status.
 
 ## Business files — Cloudflare R2
 
@@ -59,7 +59,7 @@ R2 (S3-compatible) stores binary objects only.
 - Business files are never committed to the code repository.
 - Browser clients never receive storage credentials.
 - The concrete R2 adapter lives behind `@alsvid/ports` in `@alsvid/provider-adapters`; provider-specific SDKs do not enter Domain code.
-- Live bucket/account provisioning and credential injection remain deployment acceptance work under Issue #34.
+- Live bucket/account settings and access must be verified against the authorized production deployment; do not infer their status from documentation.
 
 ## Passwords and configuration — Google Cloud Secret Manager
 
@@ -67,38 +67,39 @@ Production credentials and configuration secrets are held in Secret Manager.
 
 - Secrets are read by the runtime at deploy/run time.
 - No secret is committed to Git, embedded in an image, or written into documentation.
-- Local development uses local values only, and those values never reach production.
+- Isolated development/CI uses non-production credentials. An authorized local business runtime instead retrieves existing Production secrets at startup; do not commit, distribute or log them. Ordinary staff use an authenticated HTTPS business entrypoint rather than receiving database/R2 secret access.
 
 ## Logs — Google Cloud Logging
 
-Cloud Logging is the log sink for deployed environments. Application logging goes through
+Cloud Logging is the sink for Cloud Run; locally running application containers use their Docker logs. Application logging goes through
 `@alsvid/observability` so the sink can change without touching business code.
 
-## Backup — GitHub + Neon/database backup + R2 + Q4
+## Backup — GitHub + Neon/database backup + R2
 
-Backup spans four layers because each protects against a different failure:
+Backup and recovery span distinct layers because each protects against a different failure:
 
 1. **GitHub** — all code, contracts, migrations and definitions, with full commit history.
 2. **Neon/database backup** — PostgreSQL backup/recovery plus portable logical backups with a proven restore procedure.
 3. **R2** — object storage durability and, where required, an independent object copy.
-4. **Q4** — an offline/home-server copy so that a single cloud account problem cannot lose everything.
+4. **Optional independent offline copy** — only if separately authorized, configured and recovery-tested; no personal device is assumed part of company infrastructure.
 
 A backup that has never been restored is not a backup. Restore procedures are exercised before
 production business data is accepted.
 
 ## Local machines
 
-A local machine — including the M1 workstation — is a development environment only.
+An authorized local machine may run the **business** Web/API/Gateway stack using the central Production Neon/R2 resources, or run an **isolated** development/Test stack. These are separate modes.
 
-- It may run Web, API, Worker and PostgreSQL for development/Test acceptance.
-- It is never the production environment and never holds the production database authority.
+- Local business operation must use the guarded `infra/docker-compose.local-production.yml` path; it does not create a second PostgreSQL, MinIO, Worker or migrations.
+- Development/Test must never silently connect to Production data or secrets.
+- Local application hosting does not transfer business database authority away from Neon.
 - Losing a local machine must never lose business data or the ability to reproduce the system.
 
 ## Provider-neutral external capabilities
 
 Mail remains a provider-neutral platform capability with the current runtime adapter selecting Resend through `MAIL_PROVIDER=resend`; the API key is supplied by Secret Manager and business domains depend on `@alsvid/ports`, not vendor SDKs. AI remains provider-neutral until selected.
 
-Shopify or another external OMS remains external commerce infrastructure. ALSVID does not become an OMS and does not own storefront order, payment or fulfillment orchestration.
+ALSVID operates its own first-party storefront and order orchestration; payments may use external PSP providers. The retired Shopify ingestion and registration runtime is not a dependency. Historical audit records and migrations must not be destroyed by code cleanup.
 
 ## Relationship to other documents
 

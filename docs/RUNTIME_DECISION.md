@@ -6,16 +6,15 @@ This document records which platform runs ALSVID, why it was selected, which alt
 
 ## Decision summary
 
-- **Primary production runtime:** Google Cloud Run
-- **Fallback option 1:** Railway
-- **Fallback option 2:** Apply.Build
-- **Deployment principle:** ALSVID must remain containerized and portable. Runtime vendors are replaceable infrastructure, not business dependencies.
+- **Preferred operations model:** local-first, portable Docker application deployment for authorized operators, using the shared Production Neon database, R2 objects and centrally authorized secrets.
+- **Existing public HTTPS runtime:** Google Cloud Run `alsvid-web` and `alsvid-api` remain active deployment targets; do not remove them or redirect the public website without a separately verified cutover.
+- **Single business authority:** application instances on different computers are peers; neither local disks nor Cloud Run owns a separate business database.
+- **Deployment principle:** GitHub `main` is the source of code releases; runtime vendors are replaceable and CI uses isolated synthetic fixtures.
+- **Unverified boundary:** the optional local Production stack exists in code, but its actual startup, staff access and cross-instance write/read behavior still require acceptance.
 
-## Why Google Cloud Run is primary
+## Why retain Cloud Run as a supported public runtime
 
-ALSVID is primarily an internal operating platform with customer after-sales and vehicle-facing surfaces. It is not a high-frequency public commerce engine. The desired runtime therefore needs to be reliable, low-maintenance, Docker/container friendly, globally reachable, and able to keep cost low when traffic is light.
-
-Google Cloud Run is currently preferred because:
+The existing public-facing ALSVID website and business portals continue to require an HTTPS entrypoint independent of any one operator workstation. Cloud Run remains supported while authorized local instances run against the same data because:
 
 - it is operated by a large, established cloud provider;
 - it runs containerized applications directly;
@@ -37,9 +36,9 @@ Cloud Run is a current provider decision, not an architectural dependency. ALSVI
 
 If Cloud Run becomes too expensive, operationally inconvenient, regionally unsuitable, or commercially unattractive, the runtime may move without redesigning ALSVID business logic.
 
-## Why not run Production on the M1 Mac
+## Boundaries for local business operation
 
-The M1 is a development and Test workstation, not a production server. Production on a personal workstation would create avoidable risks around uptime, networking, power, remote access, security, deployment consistency and customer availability.
+An authorized workstation or NAS can run the application locally using shared Production data. This does **not** automatically make it a reliable public server: uptime, TLS, network access, identity, secrets, backups, and failover need independent review before changing the public site. Do not distribute database or object-storage secrets to ordinary employee computers.
 
 ## Why not use a traditional VPS first
 
@@ -47,17 +46,17 @@ A VPS can run ALSVID, but it also creates server administration work: operating-
 
 A VPS may be reconsidered later only if there is a clear cost, networking or regulatory reason.
 
-## Fallback option 1: Railway
+## Alternative runtime option: Railway
 
-Railway is the first fallback because it is simple to deploy from GitHub and works well with containerized applications. It is easier operationally than a self-managed server.
+Railway is an optional future runtime because it is simple to deploy from GitHub and works well with containerized applications. It is easier operationally than a self-managed server.
 
-Railway is not primary because its free/credit model and long-term pricing can change, and ALSVID currently prefers the stability and provider scale of Google Cloud.
+Do not introduce Railway as another database or an unreviewed duplicate business deployment.
 
-## Fallback option 2: Apply.Build
+## Alternative runtime option: Apply.Build
 
-Apply.Build is retained as a second fallback because it supports GitHub/Docker-style deployment and may be useful as a low-cost emergency or experimental runtime.
+Apply.Build may be evaluated for an alternative runtime because it supports GitHub/Docker-style deployment and may be useful as a low-cost emergency or experimental runtime.
 
-It is not primary because it is a smaller platform and ALSVID prefers a larger provider for the main production service.
+No alternative is approved for production cutover by this document.
 
 ## Cloudflare runtime note
 
@@ -65,7 +64,7 @@ Cloudflare remains strategically important for R2 object storage. Cloudflare Wor
 
 ## Development and Production
 
-Production in verified `alsvid-production` (`europe-west1`) is the only active cloud runtime; `alsvid-prod` is only a proposed migration destination. Development is local (M1/Docker); CI runs on disposable GitHub-hosted runners using temporary test resources. The former `alsvid-dev` Cloud Run environment and its Development/Test resources are retired from the release architecture.
+The existing cloud deploy target is `alsvid-production` (`europe-west1`); `alsvid-prod` remains a proposed, unverified migration target. Authorized local business deployment uses the existing Production Neon/R2/secret authority without starting another business database. CI uses disposable synthetic resources and must not access Production secrets. The former `alsvid-dev` Cloud Run Development/Test environment remains retired. See `docs/LOCAL_PRODUCTION.md` for current local acceptance limitations.
 
 Current release path:
 
@@ -78,9 +77,9 @@ Do not require cloud Development acceptance or synchronize `main` back to `devel
 
 ## Change rule
 
-Do not replace Cloud Run merely because another platform is fashionable or temporarily cheaper. A runtime migration must identify a concrete problem, demonstrate that ALSVID remains portable, and document the decision before changing Production.
+Do not replace or delete the existing Cloud Run public deployment just because the local runtime is now preferred for authorized operation. Public cutover requires tested TLS, access control, routing, resilience and monitoring; database/R2 authority must remain shared.
 
 
 ## Current environment scope (2026-10-14)
 
-Google Cloud Run remains the Production runtime, but ALSVID no longer maintains a cloud Development runtime. Development is local and CI is ephemeral. The old `alsvid-dev` runtime is retired from the release flow; this repository note is not proof of live resource deletion. See `docs/ENVIRONMENT_ARCHITECTURE.md` and `docs/RELEASE_FLOW.md` for the current model.
+Historical decision only: Cloud Run was the sole intended Production runtime in October 2026. The updated local-first plus existing Cloud Run model above supersedes this scope. This repository note is not proof of any live resource deletion. See `docs/LOCAL_PRODUCTION.md`, `docs/ENVIRONMENT_ARCHITECTURE.md` and `docs/RELEASE_FLOW.md`.
