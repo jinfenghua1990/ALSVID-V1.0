@@ -171,3 +171,21 @@ test('integrated order hub links to real business workspaces without demo fixtur
  for (const href of ['/admin/ecommerce/orders', '/admin/dealers', '/admin/production', '/admin/inventory']) assert.ok(ui.includes('href="' + href + '"'), href);
  assert.ok(!ui.includes('Ardot 页面内容参考（设计示例数据）'));
 });
+
+
+test('retired Admin read-model demos are absent while live authorized business APIs remain intact', () => {
+  const controllers = [
+    ['product.controller.ts', "@Get('catalog')"],
+    ['storefront-orders.controller.ts', "@Get('summary')"],
+    ['inventory.controller.ts', '@Get()'],
+    ['production.controller.ts', '@Get()'],
+    ['auth.controller.ts', "@Get('users')"],
+    ['audit.controller.ts', '@Get()'],
+  ];
+  for (const [file, route] of controllers) {
+    const source = read('../../../api/src/' + file);
+    assert.ok(source.includes(route), file + ' retains its real authorized API');
+  }
+  assert.match(read('./renderer.tsx'), /const AREAS = ADMIN_MODULES/);
+  assert.doesNotMatch(read('./renderer.tsx'), /<P0OperationsCenter \/>|<LiveWorkbenchTodos \/>/);
+});
