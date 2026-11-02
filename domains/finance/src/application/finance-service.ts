@@ -231,7 +231,7 @@ export class FinanceService {
     if (code === '23503') throw new FinanceNotFoundError('Referenced Finance/Partner/source entity was not found');
     if (code === '23505') throw new FinanceConflictError(/idempotency/i.test(message) ? 'Duplicate Payment idempotency key' : 'Finance record already exists');
     if (code === '23514') throw new FinanceValidationError(message);
-    if (/not found|requires mapped|must match|cannot|immutable|transition|exceeds|already reversed|Reverse active|requires explicit FX|FX rate|must belong|fully allocated|source Partner|source currency/i.test(message)) throw new FinanceConflictError(message);
+    if (/not found|requires mapped|must match|cannot|immutable|transition|exceeds|already reversed|Reverse active|requires explicit FX|FX rate|must belong|fully allocated|completely allocated|source Partner|source currency/i.test(message)) throw new FinanceConflictError(message);
     throw error;
   }
 }
