@@ -13,6 +13,7 @@ test('production Admin registry exposes only live module metadata, never Ardot s
     assert.ok(screen.route.startsWith('/admin'), screen.route);
     assert.ok(screen.title && screen.area && screen.id, screen.route);
     assert.deepEqual(screen.blocks, [], `${screen.route} must not embed fixture business records`);
+    assert.doesNotMatch(screen.title + ' ' + screen.subtitle, /示例数据|示例档案|示例权限|ALS00001/, 'Never display historic sample records in live Admin metadata');
     assert.doesNotMatch(screen.id, /^ardot-/);
     assert.ok(existsSync(new URL('../' + screen.route.slice(1) + '/page.tsx', import.meta.url)), screen.route);
   }
