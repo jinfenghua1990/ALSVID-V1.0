@@ -183,7 +183,7 @@ test('retired Admin read-model demos are absent while live authorized business A
     ['audit.controller.ts', '@Get()'],
   ];
   for (const [file, route] of controllers) {
-    const source = read('../../api/src/' + file);
+    const source = read('../../../api/src/' + file);
     assert.ok(source.includes(route), file + ' retains its real authorized API');
   }
   assert.match(read('./renderer.tsx'), /const AREAS = ADMIN_MODULES/);
