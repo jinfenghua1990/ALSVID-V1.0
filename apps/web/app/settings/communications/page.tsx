@@ -1,7 +1,7 @@
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../../_lib/portal-access';
 import { PortalSectionPage } from '../../_components/portal-section-page';
-import { navigationFor } from '../_design/admin-navigation';
+import { navigationFor } from '../../_design/admin-navigation';
 
 const cards = [
   { eyebrow: '邮件', title: '事务邮件', description: '查看验证码、业务通知和服务邮件所使用的真实发送 Provider 与状态。' },

@@ -1,5 +1,5 @@
 import { AppShell } from '@alsvid/ui';
-import { navigationFor } from '../_design/admin-navigation';
+import { navigationFor } from '../../_design/admin-navigation';
 
 export const dynamic = 'force-dynamic';
 
