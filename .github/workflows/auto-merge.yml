@@ -117,7 +117,16 @@ jobs:
             echo 'PR head changed while browser checks ran; waiting for its own CI.' >&2
             exit 1
           fi
-          gh pr merge "$number" --squash --auto --match-head-commit "$CI_HEAD_SHA"
+          # A separately enabled GitHub native auto-merge may win the race.
+          # A losing controller is not a failure when the same tested PR already merged.
+          if ! gh pr merge "$number" --squash --auto --match-head-commit "$CI_HEAD_SHA"; then
+            current_pr="$(gh api "repos/$GH_REPO/pulls/$number")"
+            if ! jq -e --arg sha "$CI_HEAD_SHA" '.merged == true and .head.sha == $sha and (.merge_commit_sha | type == "string")' <<< "$current_pr" >/dev/null; then
+              echo 'Merge failed and the matching PR is not already merged.' >&2
+              exit 1
+            fi
+            echo 'Matching PR was already merged by another authorized GitHub merge path.'
+          fi
           merged_sha=''
           for attempt in {1..12}; do
             merged_sha="$(gh api "repos/$GH_REPO/pulls/$number" --jq 'if .merged then .merge_commit_sha else "" end')"
@@ -133,7 +142,18 @@ jobs:
             echo 'A newer main commit exists; do not dispatch CI for an obsolete release.'
             exit 0
           fi
-          # GITHUB_TOKEN merges do not trigger push workflows. Explicitly run
-          # main CI with Production dispatch enabled; its gated final job deploys.
+          # Some merge paths already emit main push CI, which in turn dispatches
+          # Production. Do not start a second CI/deploy for the same merge SHA.
+          # GITHUB_TOKEN-only merges can suppress push events, so retain a
+          # bounded explicit CI fallback when no matching push CI is observed.
+          for attempt in {1..6}; do
+            push_ci_count="$(gh api "repos/$GH_REPO/actions/runs?head_sha=$merged_sha&event=push&per_page=100" \
+              --jq '[.workflow_runs[] | select(.name == "CI" and .event == "push")] | length')"
+            if [[ "$push_ci_count" != "0" ]]; then
+              echo "Main push CI already exists for $merged_sha; skipping redundant dispatch." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 5
+          done
           gh workflow run ci.yml --ref main -f deploy_production=true
-          echo "PR #$number merged; main CI dispatched for $merged_sha." >> "$GITHUB_STEP_SUMMARY"
+          echo "No main push CI observed; explicit CI dispatched for $merged_sha." >> "$GITHUB_STEP_SUMMARY"
