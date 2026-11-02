@@ -35,3 +35,12 @@
 .dialogActions{display:flex;justify-content:end;gap:8px}
 .dialog input:disabled,.dialog select:disabled{opacity:.6}
 @media(max-width:680px){.header{flex-direction:column}.headerActions{width:100%}.tableWrap table{min-width:840px}}
+
+.tableActions{display:flex;gap:8px;align-items:center;white-space:nowrap}
+.dangerButton,.dangerPrimary{font:inherit;font-size:12px;font-weight:600;border-radius:7px;padding:8px 12px;min-height:34px;cursor:pointer}
+.dangerButton{color:#b42318;background:transparent;border:1px solid #e9b7b3}
+.dangerButton:hover{background:#fff4f2}
+.dangerPrimary{background:#b42318;border:1px solid #b42318;color:white}
+.dangerButton:disabled,.dangerPrimary:disabled{opacity:.5;cursor:not-allowed}
+.deleteTarget{display:grid;gap:5px;margin:0;padding:12px;background:var(--alsvid-panel-2,#f5f7fa);border-radius:7px;font-size:13px}
+.deleteWarning{margin:0;padding:12px;border:1px solid #f2c0bb;color:#a2271c;border-radius:7px;background:#fff7f6;font-size:12px;line-height:1.65}

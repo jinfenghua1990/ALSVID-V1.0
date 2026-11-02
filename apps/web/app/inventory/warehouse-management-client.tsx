@@ -37,6 +37,9 @@ export default function WarehouseManagement({view}:{view:View}){
   const [selectedCode,setSelectedCode]=useState('ALL');
   const [itemKind,setItemKind]=useState<'ALL'|Balance['item_kind']>('ALL');
   const [draft,setDraft]=useState<'create'|Warehouse|null>(null);
+  const [deleting,setDeleting]=useState<Warehouse|null>(null);
+  const [confirmationCode,setConfirmationCode]=useState('');
+  const [deleteError,setDeleteError]=useState('');
   const [draftRegion,setDraftRegion]=useState<'DOMESTIC'|'OVERSEAS'>('DOMESTIC');
   const [country,setCountry]=useState('CN');
   const [timezone,setTimezone]=useState('Asia/Shanghai');
@@ -71,6 +74,21 @@ export default function WarehouseManagement({view}:{view:View}){
   function openEdit(w:Warehouse){
     setDraftRegion(w.country_code==='CN'?'DOMESTIC':'OVERSEAS');
     setCountry(w.country_code);setTimezone(w.timezone);setDraft(w);setNotice('');
+  }
+  function openDelete(w:Warehouse){setDraft(null);setDeleting(w);setConfirmationCode('');setDeleteError('');setNotice('')}
+  async function confirmDelete(){
+    if(!deleting||busy||confirmationCode.trim()!==deleting.code)return;
+    setBusy(true);setDeleteError('');
+    try{
+      const result=await controlApi<{id:string;code:string;deleted:true}>(
+        '/v1/warehouse/warehouses/'+encodeURIComponent(deleting.id),'DELETE',{expectedCode:deleting.code}
+      );
+      if(!result||result.deleted!==true||result.code!==deleting.code)throw new Error('删除结果异常，请刷新核对仓库');
+      const code=deleting.code;setDeleting(null);setConfirmationCode('');
+      const verified=await reload();
+      setNotice(verified?'仓库 '+code+' 已删除，列表已重新核对。':'删除接口已返回成功，但列表回读失败，请刷新核验仓库 '+code+'。');
+    }catch(reason){setDeleteError(reason instanceof Error?reason.message:'仓库删除失败');}
+    finally{setBusy(false)}
   }
   function switchRegion(next:'DOMESTIC'|'OVERSEAS'){
     setDraftRegion(next);setCountry(next==='DOMESTIC'?'CN':'DE');
@@ -120,7 +138,7 @@ export default function WarehouseManagement({view}:{view:View}){
 
   return <section className={styles.workspace} aria-label={view==='settings'?'仓库设置':'仓库库存'}>
     <header className={styles.header}>
-      <div><p className={styles.eyebrow}>INVENTORY / WAREHOUSE</p><h1>{view==='settings'?'仓库设置':'仓库库存'}</h1>
+      <div><p className={styles.eyebrow}>库存管理 / 仓库档案</p><h1>{view==='settings'?'仓库设置':'仓库库存'}</h1>
         <p>{view==='settings'?'维护仓库主档案；国内/海外仓由仓库所在国家判定，所有仓库共用一个库存系统。':'按真实仓库、库位与 SKU 查看库存台账；这里不创建第二套库存。'}</p></div>
       <div className={styles.headerActions}>
         <button type="button" className={styles.secondary} onClick={()=>void reload()} disabled={status==='loading'||busy}>刷新</button>
@@ -146,13 +164,13 @@ export default function WarehouseManagement({view}:{view:View}){
       <div className={styles.tableWrap}><table aria-label="仓库设置表"><thead><tr><th>仓库编号</th><th>仓库名称</th><th>仓库类型</th><th>国家</th><th>时区</th><th>运营方</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>{filteredWarehouses.length?filteredWarehouses.map(w=><tr key={w.id}>
           <td><strong>{w.code}</strong></td><td>{w.name}</td><td>{kindOf(w.country_code)}</td><td>{w.country_code}</td><td>{w.timezone}</td><td>{w.partner_name??'自营 / 未关联'}</td>
-          <td>{w.active?'启用':'停用'}</td><td><button type="button" className={styles.rowButton} onClick={()=>openEdit(w)}>编辑</button></td>
+          <td>{w.active?'启用':'停用'}</td><td><div className={styles.tableActions}><button type="button" className={styles.rowButton} disabled={busy} onClick={()=>openEdit(w)}>编辑</button><button type="button" className={styles.dangerButton} disabled={busy} onClick={()=>openDelete(w)}>删除</button></div></td>
         </tr>):<tr><td colSpan={8} className={styles.empty}>没有匹配的仓库；可点击“新建仓库”建立真实档案。</td></tr>}</tbody>
       </table></div>
-      <p className={styles.footnote}>仓库编号、所属国家与仓库类型在建档后保持不变；仓库名称、时区支持编辑。第三方仓 API 与仓库 / SKU 映射通过 <a href="/settings/integrations">系统集成</a> 配置，未配置不会伪装为已连接。</p>
+      <p className={styles.footnote}>仅未使用过的空仓可删除；有库存、库存流水、盘点或第三方仓关联时禁止删除。仓库编号、所属国家与仓库类型在建档后保持不变；仓库名称、时区支持编辑。第三方仓 API 与仓库 / SKU 映射通过 <a href="/settings/integrations">系统集成</a> 配置，未配置不会伪装为已连接。</p>
     </>:null}
     {status==='ready'&&view==='stock'?<>
-      <p className={styles.summary}>找到 {filteredBalances.length} 条库存位置记录 · 现存 / 预留 / 台账可用均读取现有 Inventory 数据源</p>
+      <p className={styles.summary}>找到 {filteredBalances.length} 条库存位置记录 · 现存 / 预留 / 台账可用均读取统一库存系统</p>
       <div className={styles.tableWrap}><table aria-label="仓库库存表"><thead><tr><th>仓库编号 / 名称</th><th>仓库类型</th><th>库存对象</th><th>商品 / SKU / VIN</th><th>库位</th><th>现存</th><th>预留</th><th>台账可用</th></tr></thead>
         <tbody>{filteredBalances.length?filteredBalances.map((row,i)=>{
           const w=byCode.get(row.warehouse_code);
@@ -166,6 +184,23 @@ export default function WarehouseManagement({view}:{view:View}){
       </table></div>
       <p className={styles.footnote}>仓库台账可用量 ≠ 官网可售库存。官网还须检查上架、市场范围、渠道分配和支付履约条件。<a href="/admin/inventory#movement-history">出入库 / 调拨</a>、<a href="/admin/inventory#stocktake">盘点</a>继续使用原有受控库存流程。</p>
     </>:null}
+    {deleting?<div className={styles.overlay} role="presentation" onMouseDown={()=>{if(!busy)setDeleting(null)}}>
+      <section className={styles.dialog} role="alertdialog" aria-modal="true" aria-label="二次确认删除仓库" onMouseDown={e=>e.stopPropagation()}
+        onKeyDown={e=>{if(e.key==='Escape'&&!busy)setDeleting(null)}}>
+        <div className={styles.dialogHead}><div><h2>二次确认删除仓库</h2><p>删除不可撤销，请仔细核对仓库信息。</p></div>
+          <button type="button" className={styles.iconButton} disabled={busy} aria-label="关闭" onClick={()=>setDeleting(null)}>×</button></div>
+        <p className={styles.deleteTarget}>仓库编号：<strong>{deleting.code}</strong><span>仓库名称：{deleting.name}</span></p>
+        <p className={styles.deleteWarning}>如存在库存、库存预留、出入库历史、盘点或第三方仓映射，系统禁止删除。删除空仓不会清空任何库存。</p>
+        <label>请再次输入仓库编号 {deleting.code} 以确认
+          <input aria-label="再次输入仓库编号" autoFocus autoComplete="off" value={confirmationCode}
+            onChange={e=>setConfirmationCode(e.target.value.toUpperCase())} placeholder="输入完整仓库编号" disabled={busy}/>
+        </label>
+        {deleteError?<p className={styles.error} role="alert">{deleteError}</p>:null}
+        <div className={styles.dialogActions}><button type="button" className={styles.secondary} disabled={busy} onClick={()=>setDeleting(null)}>取消</button>
+          <button type="button" className={styles.dangerPrimary} disabled={busy||confirmationCode.trim()!==deleting.code}
+            onClick={()=>void confirmDelete()}>{busy?'核验并删除中…':'确认删除仓库'}</button></div>
+      </section>
+    </div>:null}
     {draft?<div className={styles.overlay} role="presentation" onMouseDown={()=>{if(!busy)setDraft(null)}}>
       <form key={draft==='create'?'create':draft.id} className={styles.dialog} role="dialog" aria-modal="true" aria-label={draft==='create'?'新建仓库':'编辑仓库'} onSubmit={e=>void save(e)}
         onMouseDown={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Escape'&&!busy)setDraft(null)}}>

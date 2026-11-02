@@ -57,6 +57,27 @@ export class WarehouseService {
     return row;
   }
 
+  async deleteWarehouse(actor: WarehouseActor, id: string, input: { expectedCode: string }): Promise<{id:string;code:string;deleted:true}> {
+    requireCapability(actor, WarehouseCapability.Manage);
+    if (!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id) || !input || typeof input.expectedCode !== 'string')
+      throw new WarehouseValidationError('请指定有效仓库并填写要删除的仓库编号');
+    const expectedCode = normalizeWarehouseCode(input.expectedCode, 'expectedCode');
+    try {
+      return await this.repository.transaction(async executor => {
+        const deleted = await this.repository.deleteWarehouse({id,expectedCode},executor);
+        await this.audit.record({
+          actorUserId:actor.userId,action:'warehouse.deleted',targetType:'warehouse',targetId:id,
+          metadata:{code:deleted.code},
+        },executor);
+        return deleted;
+      });
+    } catch (error) {
+      if (postgresErrorCode(error) === '23503')
+        throw new WarehouseConflictError('禁止删除：该仓库仍被其他业务记录引用，请先核对库存、盘点、订单或第三方仓关联');
+      throw error;
+    }
+  }
+
   async createLocation(actor: WarehouseActor, input: { warehouseId: string; parentLocationId?: string; code: string; name: string; locationType: string }): Promise<any> {
     requireCapability(actor, WarehouseCapability.Manage);
     if (!input.warehouseId || !input.name?.trim()) throw new WarehouseValidationError('warehouseId and name are required');
