@@ -288,9 +288,6 @@ importers:
 
   domains/integrations:
     dependencies:
-      '@alsvid/commerce':
-        specifier: workspace:*
-        version: link:../commerce
       '@alsvid/database':
         specifier: workspace:*
         version: link:../../packages/database
