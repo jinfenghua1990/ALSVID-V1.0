@@ -63,6 +63,31 @@ BEGIN
  END LOOP;
 END $$;
 
+-- These canonical identifiers are immutable even when no child record yet exists.
+CREATE OR REPLACE FUNCTION product.reject_platform_number_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $
+BEGIN
+ IF NEW.platform_number IS DISTINCT FROM OLD.platform_number THEN
+   RAISE EXCEPTION 'Platform number is immutable';
+ END IF;
+ RETURN NEW;
+END $;
+CREATE TRIGGER product_platform_number_immutable
+BEFORE UPDATE ON product.platforms
+FOR EACH ROW EXECUTE FUNCTION product.reject_platform_number_mutation();
+
+CREATE OR REPLACE FUNCTION product.reject_variant_number_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $
+BEGIN
+ IF NEW.variant_number IS DISTINCT FROM OLD.variant_number THEN
+   RAISE EXCEPTION 'Variant number is immutable';
+ END IF;
+ RETURN NEW;
+END $;
+CREATE TRIGGER product_variant_number_immutable
+BEFORE UPDATE ON product.variants
+FOR EACH ROW EXECUTE FUNCTION product.reject_variant_number_mutation();
+
 -- New numeric FK projections are canonical references, backed by an FK.
 -- Old UUID fields survive only during the coordinated API migration.
 ALTER TABLE product.models ADD COLUMN platform_number bigint;
