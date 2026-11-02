@@ -113,6 +113,7 @@ jobs:
       - run: node --test scripts/www-visual-consistency.test.mjs
       - run: node --test scripts/release-gate.test.mjs
       - run: node --test scripts/product-runtime-topology.test.mjs
+      - run: node --test scripts/retired-architecture.test.mjs
       - run: node --test scripts/release-scope.test.mjs
       - run: node --test scripts/check-dealer-api-readiness.test.mjs
         if: steps.scope.outputs.docs_only != 'true'

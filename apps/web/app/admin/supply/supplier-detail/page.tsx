@@ -1,8 +1,7 @@
-import AdminScreen from "../../../_design/renderer";
-import { screenById } from "../../../_design";
+import { redirect } from 'next/navigation';
 
-export const metadata = { title: "供应商详情 · ALSVID" };
-
-export default function Page() {
-  return <AdminScreen screen={screenById("supplier-detail")} />;
+// This historic URL had only sample design content, not a persisted detail record.
+// Return users to the live module; never render fictitious business data.
+export default function RetiredDemoDetail() {
+  redirect('/admin/supply');
 }

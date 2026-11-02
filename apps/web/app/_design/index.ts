@@ -1,21 +1,13 @@
-import { screensA } from './screens-a';
-import { screensB } from './screens-b';
-import { screensC } from './screens-c';
 import type { Screen } from './types';
-import synced from './synced-screens.json';
+import activeScreens from './synced-screens.json';
 
-const reviewed = synced as Screen[];
-const previous = [...screensA, ...screensB, ...screensC];
-export const screens: readonly Screen[] = [
-  ...previous.filter(screen => !reviewed.some(item => item.route === screen.route)),
-  ...reviewed,
-];
+// The registry contains metadata for real, implemented Admin routes only.
+// Retired Ardot example screens are never loaded into production.
+export const screens: readonly Screen[] = activeScreens as Screen[];
 
 export function screenById(id: string): Screen {
-  const screen = screens.find((item) => item.id === id);
-  if (!screen) {
-    throw new Error(`未找到设计页面：${id}`);
-  }
+  const screen = screens.find(item => item.id === id);
+  if (!screen) throw new Error(`Unknown active ALSVID Admin screen: ${id}`);
   return screen;
 }
 

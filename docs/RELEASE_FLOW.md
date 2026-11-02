@@ -44,6 +44,13 @@ After rollout, the existing strict checks remain mandatory: public pages must su
 
 See [Production Runbook](PRODUCTION_RUNBOOK.md), [Environment Architecture](ENVIRONMENT_ARCHITECTURE.md), [Current State](CURRENT_STATE.md) and [Issue #34](https://github.com/jinfenghua1990/ALSVID/issues/34).
 
+## Second legacy architecture cleanup (2026-11-02)
+
+- The 85-page Ardot mock screen corpus and redundant Admin fixture renderer are removed. Only implemented route metadata remains; archived deep links return to live workspaces rather than rendering simulated sales or vehicle records.
+- Publicly served stale Vue 2/Element UI assets and the isolated CRMEB PHP/MySQL validation pipeline, source-import automation and native runtime snapshots are retired. Existing ALSVID Next.js, API and Neon/R2 authority are unchanged; historical license and ADR records remain.
+- Duplicate theme-legacy.css selectors were folded into theme.css; old workbench variants redirect to /admin.
+- Production deployment and API/database acceptance remain exact-SHA gated. This code cleanup does not itself delete old Cloud Run revisions/services or live business data; audit production resource ownership before any remote deletion.
+
 ## Retired references
 
 The previous 2026-10-20 `WWW-only because Admin TLS failed` note and older `alsvid-prod`-as-live claims are historical, not current runtime evidence. `development-deploy.yml`, `promote-development.yml` and `test-build.yml` are retired; no cloud resource cleanup is implied.

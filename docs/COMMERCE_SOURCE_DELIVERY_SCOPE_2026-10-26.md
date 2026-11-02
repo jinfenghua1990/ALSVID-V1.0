@@ -10,7 +10,7 @@ status: PR #375 deployed as `5cff0a37eb0911add744e4fb368056c3a2bb79e9`; producti
 负责人在 PR #375 完成代码、测试、截图审查后明确指示“**不用，直接部署**”。该确认适用于 PR #375；此前因缺少明确上线确认而产生的发布审批阻断已解除，不应继续把此版本记为等待批准或草稿。
 
 ## 已导入与已适配范围
-- `external/medusa-dtc` 为固定版本官方 DTC 前台源码与许可证；商品卡适配在现有 Web 内并使用共享三语词库。`external/crmeb` 保留固定版本源码与许可证，原生 Vue/Element UI 商品编辑器适配连接现有 Node API。`docs/COMMERCE_SOURCE_LOCK.json` 记录原始导入快照。
+- `external/medusa-dtc` 为固定版本官方 DTC 前台源码与许可证；商品卡适配在现有 Web 内并使用共享三语词库。CRMEB 原生 Vue 2/Element UI/PHP/MySQL 对比运行代码及静态快照在 2026-11-02 第二轮清理中移除；仅保留历史许可文本和决策记录。当前 Node/Next.js 商品编辑与统一 API 是唯一正式实现。`docs/COMMERCE_SOURCE_LOCK.json` 记录原始导入快照。
 - PHP/MySQL 原生容器仅用于隔离参考验收，不是本次生产商品功能的运行依赖。
 - WWW `/{zh,de,en}/shop-preview` 展示已发布实验商品，支持详情与独立预览袋；固定交互样例保留在 `/shop-preview/reference`。
 - Admin `/admin/commerce-lab/catalog` 管理三语名称/说明、参考图、方案价与发布状态。`/admin/commerce-lab/catalog/{id}/preview` 支持已保存商品的三语只读预览；草稿与归档商品不向官网公开。
