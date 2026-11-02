@@ -20,7 +20,7 @@ const AREAS = ADMIN_MODULES;
 const PRIMARY_AREAS = AREAS;
 const PRIMARY_AREA_ICONS: Record<string, string> = {
   '工作台': '🏠', '产品研发': '🧩', '商城运营': '🛒', '经销商管理': '🏢',
-  '生产制造': '🏭', '库存管理': '📦', '跨境物流': '🚢', '采购管理': '📋',
+  '生产制造': '🏭', '库存管理': '📦', '跨境物流': '🚢', '供应链管理': '📋', '采购管理': '📋',
   '客户与车主': '👤', '售后服务': '🛠️', '财务管理': '💳', '经营分析': '📈', '设置': '⚙️',
 };
 
@@ -103,7 +103,8 @@ export async function AdminScreen({ screen, theme, children, hidePageHeading = f
   const isIntegratedOverview = Boolean((screen.sourceNode || isLiveProductionWorkspace) && hasIntegratedOperations(screen.area) && (
     (screen.route.split('/').length === 3 && screen.area !== '订单') ||
     (screen.area === '订单' && screen.route === '/admin/orders') ||
-    (screen.area === '电商' && screen.route.startsWith('/admin/ecommerce/'))
+    (screen.area === '电商' && screen.route.startsWith('/admin/ecommerce/')) ||
+    (screen.area === '供应链' && screen.route === '/admin/supply/legacy')
   ));
   const isEcommerceWorkspace = screen.area === '电商' && isIntegratedOverview;
   const isVehicleDetail = screen.route === '/admin/production/vin-detail' || screen.route === '/admin/production/vin';

@@ -75,13 +75,13 @@ export const ADMIN_SECONDARY_NAVIGATION: Readonly<Record<string, readonly AdminS
     group('出口与跨境交付', [['出口物流与清关', '/admin/logistics']]),
   ],
   '供应链': [
-    group('采购业务', [
-      ['采购订单', '/admin/supply#purchasing'],
-      ['采购报价', '/admin/supply#quotations'],
-      ['收货记录', '/admin/supply#receipts'],
+    group('生产交付', [
+      ['生产交付总单', '/admin/supply'],
+      ['原采购工作台', '/admin/supply/legacy'],
+      ['生产 / VIN 质检明细', '/admin/production'],
+      ['出口物流 / 清关明细', '/admin/logistics'],
     ]),
-    group('供应商', [['供应商目录', '/admin/supply']]),
-    group('后续能力', [['采购申请（待接入）'], ['赠品采购（待接入）']]),
+    group('主数据', [['仓库设置', '/admin/inventory/warehouses'], ['仓库库存', '/admin/inventory/stock']]),
   ],
   '客户': [
     group('客户与车主', [['客户列表', '/admin/customers'], ['车辆绑定（待接入）'], ['购买记录（待接入）']]),
@@ -131,10 +131,10 @@ export const ADMIN_SECONDARY_NAVIGATION: Readonly<Record<string, readonly AdminS
 // bookmarks. It never turns old root paths into navigation destinations.
 const legacyAreas: readonly (readonly [string, string])[] = [
   ['/product', '产品研发'], ['/commerce', '商城运营'],
-  ['/production', '生产制造'], ['/vehicle360', '生产制造'],
-  ['/inventory', '库存管理'], ['/logistics', '跨境物流'],
+  ['/production', '供应链管理'], ['/vehicle360', '供应链管理'],
+  ['/inventory', '库存管理'], ['/logistics', '供应链管理'],
   ['/dealers', '经销商管理'], ['/dealer', '经销商管理'], ['/partners', '经销商管理'],
-  ['/supply', '采购管理'], ['/finance', '财务管理'],
+  ['/supply', '供应链管理'], ['/finance', '财务管理'],
   ['/customers', '客户与车主'], ['/after-sales', '售后服务'],
   ['/overview', '经营分析'], ['/settings', '设置'], ['/people', '设置'],
   ['/admin/orders', '商城运营'],

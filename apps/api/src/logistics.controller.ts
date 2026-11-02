@@ -57,6 +57,11 @@ export class LogisticsController {
     return { data: await logisticsService.cancelShipment(requireAuth(request), id, input) };
   }
 
+  @Post('shipments/:id/receive-warehouse')
+  async receiveWarehouse(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
+    return { data: await logisticsService.receiveWarehouseShipment(requireAuth(request), id) };
+  }
+
   @Post('shipments/:id/receive-germany')
   async receiveGermany(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
     return { data: await logisticsService.receiveGermanyShipment(requireAuth(request), id) };
