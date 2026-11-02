@@ -83,6 +83,7 @@ export function ProductionDeliveryWorkspace(){
   const [showCreate,setShowCreate]=useState(false);
   const [query,setQuery]=useState('');
   const [focusedShipmentId,setFocusedShipmentId]=useState('');
+  const [unitLimit,setUnitLimit]=useState(20);
   const [sourceReady,setSourceReady]=useState<string[]>([]);
   const reload=useCallback(async()=>{
     setLoading(true);
@@ -108,6 +109,7 @@ export function ProductionDeliveryWorkspace(){
   const selected=facts.procurement.purchaseOrders.find(po=>po.id===activeId)??null;
   const poLines=selected?facts.procurement.purchaseOrderLines.filter(l=>l.purchase_order_id===selected.id):[];
   const productionOrders=selected?facts.production.orders.filter(o=>o.source_purchase_order_id===selected.id):[];
+  const productionUnits=facts.production.units.filter(u=>productionOrders.some(o=>o.id===u.production_order_id));
   const shipments=selected?facts.logistics.shipments.filter(s=>s.source_purchase_order_id===selected.id):[];
   const shipmentIds=new Set(shipments.map(s=>s.id));
   const shipmentCargo=facts.logistics.cargo.filter(c=>shipmentIds.has(c.shipment_id));
@@ -276,6 +278,15 @@ export function ProductionDeliveryWorkspace(){
               {o.status==='QC_PENDING'?<button disabled={busy} onClick={()=>void run(()=>api(`/v1/production/orders/${o.id}/complete`,{method:'POST',body:'{}'}),'生产单已完成')}>质检完成后结单</button>:null}
               {o.status==='COMPLETED'?'已完成':null}</td></tr>)}
             {!productionOrders.length?<tr><td colSpan={6}>暂无关联的生产单</td></tr>:null}</tbody></table></div>
+        {productionUnits.length>0?<div>
+          <div className={styles.panelHead}><h4>逐车装配 / 质检记录</h4><span>共 {productionUnits.length} 台，只显示前 {Math.min(unitLimit,productionUnits.length)} 台</span></div>
+          <div className={styles.scroll}><table><thead><tr><th>生产单</th><th>车辆序号</th><th>实际状态</th><th>操作</th></tr></thead><tbody>
+            {productionUnits.slice(0,unitLimit).map(u=>{const order=productionOrders.find(o=>o.id===u.production_order_id);return <tr key={u.id}><td>{order?.production_order_number}</td><td>{u.unit_no}</td><td>{label(u.status)}</td>
+              <td>{order?.status==='IN_PROGRESS'&&['PLANNED','ASSEMBLING'].includes(u.status)?<button disabled={busy} onClick={()=>{if(window.confirm('已经实际完成该台整车装配？'))void run(()=>api(`/v1/production/units/${u.id}/assembled`,{method:'POST',body:'{}'}),'该台装配事实已记录');}}>确认装配</button>:null}
+                {order?.status==='QC_PENDING'&&u.status==='QC_PENDING'?<button disabled={busy} onClick={()=>{if(window.confirm('已按质检要求实际检验该台车辆并确认合格？'))void run(()=>api(`/v1/production/units/${u.id}/inspect`,{method:'POST',body:JSON.stringify({result:'PASS'})}),'该台质检通过记录已保存');}}>记录质检通过</button>:null}
+                {u.status==='QC_PASSED'?'已通过':null}</td></tr>;})}
+          </tbody></table></div>{productionUnits.length>unitLimit?<button type="button" onClick={()=>setUnitLimit(x=>x+20)}>显示更多车辆</button>:null}
+        </div>:null}
         {selected.status==='CONFIRMED'||selected.status==='PARTIALLY_FULFILLED'||selected.status==='FULFILLED'?<form className={styles.subform} onSubmit={createProduction}>
           <h4>＋ 新增关联生产单</h4><div className={styles.fields}>
             <label>量产配置<select name="buildSpec" required defaultValue=""><option value="">选择已发布配置</option>{facts.engineering.buildSpecs.filter(b=>b.status==='RELEASED'&&poLines.some(l=>l.sku_id===b.sku_id)).map(b=><option key={b.id} value={b.id}>{b.code}</option>)}</select></label>

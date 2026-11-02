@@ -5,7 +5,7 @@ const read=(path)=>readFileSync(new URL(path,import.meta.url),'utf8');
 
 test('production delivery uses real domain APIs and never fabricates cost quotes or stock',()=>{
   const ui=read('./production-delivery-workspace.tsx');
-  const core=read('../../../domains/logistics/src/core/model.ts');
+  const core=read('../../../../domains/logistics/src/core/model.ts');
   const controller=read('../../../api/src/logistics.controller.ts');
   assert.match(ui,/\/api\/control/);
   assert.match(ui,/\/v1\/procurement\/purchase-orders/);
@@ -18,4 +18,13 @@ test('production delivery uses real domain APIs and never fabricates cost quotes
   assert.match(core,/FACTORY_TO_DOMESTIC_WAREHOUSE/);
   assert.match(controller,/receive-warehouse/);
   assert.doesNotMatch(ui,/mockShipment|samplePurchaseOrder|fakeStatus/);
+});
+
+test('delivery migration adds domestic route without losing inventory or customs safeguards',()=>{
+  const sql=read('../../../../packages/database/migrations/0052_production_delivery_shipments.sql');
+  const repo=read('../../../../domains/logistics/src/infrastructure/postgres-logistics-repository.ts');
+  assert.match(sql,/source_purchase_order_id/);
+  assert.match(sql,/FACTORY_TO_DOMESTIC_WAREHOUSE/);
+  assert.match(sql,/Shipment cargo SKU is not a purchased SKU/);
+  assert.match(repo,/sourcePurchaseOrderId/);
 });
