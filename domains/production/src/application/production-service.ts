@@ -6,7 +6,8 @@ export class ProductionService{
  async receiveFinishedGoods(actor:ProductionActor,orderId:string,input:{locationId:string;quantity:number;note?:string}):Promise<any>{
   requireCapability(actor,ProductionCapability.Release);
   if(!actor.permissions.includes('inventory.move'))throw new ForbiddenError('PRODUCTION_INVENTORY_FORBIDDEN','Missing permission: inventory.move');
-  if(!this.inventory)throw new ProductionConflictError('Production inventory integration is not configured');
+  const inventory=this.inventory;
+  if(!inventory)throw new ProductionConflictError('Production inventory integration is not configured');
   if(!Number.isSafeInteger(input?.quantity)||input.quantity<=0||!input.locationId)throw new ProductionValidationError('Factory receipt requires a valid warehouse and positive integer quantity');
   return this.repository.transaction(async e=>{
     const order=await this.repository.lockFactoryOrder(orderId,e);
@@ -15,7 +16,7 @@ export class ProductionService{
     if(!await this.repository.verifyFactoryLocation(input.locationId,order.factory_partner_id,e))throw new ProductionValidationError('Choose an active factory-managed China warehouse');
     const already=await this.repository.receivedFactoryQuantity(orderId,e);
     if(already+input.quantity>Number(order.planned_quantity))throw new ProductionConflictError('Factory received quantity cannot exceed completed quantity');
-    const movement=await this.inventory.postMovement(actor,{movementType:'RECEIPT',itemKind:'SKU',itemId:order.sku_id,unit:'EA',quantity:String(input.quantity),destinationLocationId:input.locationId,referenceType:'PRODUCTION_ORDER',referenceId:orderId,reason:input.note?.trim()||'Verified factory finished-goods physical receipt',idempotencyKey:`factory-finished:${orderId}:${already}:${input.quantity}`,correlationId:orderId},e);
+    const movement=await inventory.postMovement(actor,{movementType:'RECEIPT',itemKind:'SKU',itemId:order.sku_id,unit:'EA',quantity:String(input.quantity),destinationLocationId:input.locationId,referenceType:'PRODUCTION_ORDER',referenceId:orderId,reason:input.note?.trim()||'Verified factory finished-goods physical receipt',idempotencyKey:`factory-finished:${orderId}:${already}:${input.quantity}`,correlationId:orderId},e);
     await this.repository.addFactoryReceipt(orderId,input.locationId,input.quantity,movement.id,actor.userId,e);
     await this.audit.record({actorUserId:actor.userId,action:'production.factory_finished_goods_received',targetType:'production.order',targetId:orderId,metadata:{quantity:input.quantity,locationId:input.locationId}},e);
     return {received:input.quantity,totalReceived:already+input.quantity,remaining:Number(order.planned_quantity)-already-input.quantity};
