@@ -6,7 +6,7 @@ BEGIN
       OR EXISTS(
         SELECT 1 FROM finance.landed_cost_components c
         LEFT JOIN finance.landed_cost_allocations a ON a.component_id=c.id
-        WHERE c.batch_id=NEW.id GROUP BY c.id,c.batch_currency_amount
+        WHERE c.batch_id=NEW.id AND c.capitalizable=true GROUP BY c.id,c.batch_currency_amount
         HAVING COALESCE(sum(a.allocated_amount),0)<>c.batch_currency_amount
       ) THEN
       RAISE EXCEPTION 'Landed cost batch requires every component to be completely allocated';
