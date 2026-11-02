@@ -5,25 +5,25 @@ import test from 'node:test';
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 test('procurement sidebar targets the existing real workbench tabs', () => {
-  const ui = read('./renderer.tsx');
+  const ui = read('./admin-navigation.ts');
   const supply = read('../supply/supply-client.tsx');
   const menuStart = ui.indexOf("  '供应链': [");
   const menuEnd = ui.indexOf("  '客户': [", menuStart);
   assert.ok(menuStart >= 0 && menuEnd > menuStart, 'procurement menu exists');
   const menu = ui.slice(menuStart, menuEnd);
 
-  assert.match(menu, /采购订单', '采购报价', '收货记录'/);
+  assert.match(menu, /采购订单[\s\S]*采购报价[\s\S]*收货记录/);
   assert.match(menu, /供应商目录/);
   assert.match(menu, /采购申请（待接入）/);
   assert.match(menu, /赠品采购（待接入）/);
-  assert.doesNotMatch(menu, /items: \['采购申请', '采购订单', '到货管理', '入库记录'\]/);
+  assert.doesNotMatch(menu, /\['采购申请', '\/admin/);
   for (const [label, route] of [
     ['采购订单', '/admin/supply#purchasing'],
     ['采购报价', '/admin/supply#quotations'],
     ['收货记录', '/admin/supply#receipts'],
     ['供应商目录', '/admin/supply'],
   ]) {
-    assert.ok(ui.includes("'" + label + "': '" + route + "'"), label + ' must open real procurement view');
+    assert.ok(ui.includes("['" + label + "', '" + route + "']"), label + ' must open real procurement view');
   }
   assert.match(supply, /type SupplyView = 'suppliers' \| 'quotations' \| 'orders' \| 'receipts'/);
   assert.match(supply, /const anchor = hash\.replace/);
@@ -34,9 +34,9 @@ test('procurement sidebar targets the existing real workbench tabs', () => {
 });
 
 test('parts menu opens the actual user-maintained parts registry', () => {
-  const ui = read('./renderer.tsx');
+  const ui = read('./admin-navigation.ts');
   const product = read('../product/product-client.tsx');
-  assert.ok(ui.includes("'零配件': '/admin/product?type=PARTS#parts'"));
+  assert.ok(ui.includes("label: '零配件', href: '/admin/product?type=PARTS#parts'"));
   assert.match(product, /id="parts-library-panel"/);
   assert.match(product, /id="parts"/);
   assert.match(product, /const panel = target\?\.closest\('details'\)/);

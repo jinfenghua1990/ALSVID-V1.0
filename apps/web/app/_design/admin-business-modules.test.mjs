@@ -52,7 +52,7 @@ test('ecommerce has a dedicated workbench and distinct real workflow routes', ()
   assert.match(stock, /库存未知，不代表缺货或零库存/);
   assert.match(stock, /台账可用量不等于商城可售量/);
   assert.doesNotMatch(stock, /method:\s*'POST'/);
-  assert.match(read('./renderer.tsx'), /'电商库存查询': '\/admin\/ecommerce\/inventory'/);
+  assert.match(read('./admin-navigation.ts'), /'电商库存查询', '\/admin\/ecommerce\/inventory'/);
   assert.match(read('./renderer.tsx'), /<IntegratedOperations area=\{screen\.area\} route=\{screen\.route\} \/>/);
   assert.doesNotMatch(product, /<HomepageProductBindingPanel models=/);
   assert.doesNotMatch(product, /<CatalogPublicationPanel models=/);
@@ -82,7 +82,7 @@ test('framework directory has a single source of 13 Admin modules and does not p
   assert.match(ui, /const AREAS = ADMIN_MODULES/);
   assert.match(ui, /<AdminSecondaryNavigation moduleLabel=\{moduleLabel\} groups=\{secondaryNavGroups\} \/>/);
   assert.match(ui, /const secondaryNavGroups = \[/);
-  assert.match(ui, /'工作台': \[/);
+  assert.match(read('./admin-navigation.ts'), /'工作台': \[/);
 });
 
 
@@ -125,11 +125,11 @@ test('product sidebar links to live sections without permanently highlighting mo
   for (const anchor of ['product-types', 'series', 'vehicle-models', 'vehicle-details', 'models', 'engineering', 'parts']) {
     assert.ok(product.includes('id="' + anchor + '"'), 'product section exists: ' + anchor);
   }
-  assert.ok(ui.includes("'产品类型': '/admin/product#product-types'"));
-  assert.ok(ui.includes("'整车产品（车辆明细）'"));
-  assert.match(ui, /vehicleModelMenu\.map\(model => model\.label\)/);
-  assert.ok(ui.includes("'零配件'"));
-  assert.ok(ui.includes("'技术平台'"));
+  assert.ok(read('./admin-navigation.ts').includes("label: '整车产品（车辆明细）', href: '/admin/product?type=BIKE#vehicle-details'"));
+  assert.ok(read('./admin-navigation.ts').includes("'整车产品（车辆明细）'"));
+  assert.match(ui, /vehicleModelMenu\.map\(model => \(\{/);
+  assert.ok(read('./admin-navigation.ts').includes("label: '零配件'"));
+  assert.ok(read('./admin-navigation.ts').includes("label: '技术平台'"));
   assert.ok(!ui.includes("{ group: '商城联动'"));
   assert.ok(!styles.includes('.av-body--product .av-railitem[href="/admin/product#model-register"]'));
 });
@@ -155,7 +155,7 @@ test('all business modules are directly visible and the comparison module is rem
 test('inventory prioritizes warehouse and stock tables; aftersales is concise', () => {
   const ui = read('./renderer.tsx');
   const inventory = read('../inventory/inventory-client.tsx');
-  assert.match(ui, /'售后': \[\s*\{ group: '售后业务', items: \['售后工单', 'VIN查询'\]/);
+  assert.match(read('./admin-navigation.ts'), /'售后': \[\s*group\('售后业务'/);
   for (const anchor of ['warehouses', 'balances', 'warehouse-setup', 'stocktake', 'movement-history']) {
     assert.ok(inventory.includes('id="' + anchor + '"'), anchor);
   }

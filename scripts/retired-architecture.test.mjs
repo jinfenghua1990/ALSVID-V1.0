@@ -35,6 +35,8 @@ test('retired parallel frameworks cannot be reintroduced into ALSVID production'
     'apps/web/app/_design/live-operations.tsx',
     'apps/web/app/_design/live-operations.json',
     'packages/contracts',
+    'apps/web/app/app-navigation.ts',
+    'apps/web/app/app-navigation.test.mjs',
     'apps/web/app/_components/home/hero.tsx',
     'apps/web/app/_components/home/bike-vector.tsx',
     'apps/web/app/_components/home/folding-demo.tsx',
@@ -67,7 +69,7 @@ test('retired parallel frameworks cannot be reintroduced into ALSVID production'
   ];
   for (const path of removed) assert.equal(exists(path), false, 'Retired path revived: ' + path);
   const source = read('apps/web/app/_design/renderer.tsx');
-  assert.doesNotMatch(source, /BlockView|DesignTable|DesignForm|<Blocks/);
+  assert.doesNotMatch(source, /BlockView|DesignTable|DesignForm|<Blocks|menuDestination|scopedMenus/);
   assert.doesNotMatch(read('apps/web/app/_design/index.ts'), /screens-a|screens-b|screens-c/);
   assert.equal(JSON.parse(read('apps/web/app/_design/synced-screens.json')).length, 13);
 });
