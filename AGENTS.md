@@ -65,9 +65,8 @@ Production has been deployed. Never assume a target has no business data based o
 
 ## Confirmed infrastructure direction
 
-- Production runtime primary: Google Cloud Run.
-- Runtime fallback 1: Railway.
-- Runtime fallback 2: Apply.Build.
+- Runtime decision (2026-11-02): authorized **local-first** Docker Web/API/Gateway application deployment may use the existing Production Neon/R2/secrets; the existing Cloud Run `alsvid-web`/`alsvid-api` remains another live HTTPS location and the current public site release target. Local operational preference does not prove a public cutover or tested local deployment. See `docs/LOCAL_PRODUCTION.md`.
+- Railway and Apply.Build are unapproved alternative runtime candidates, not additional business databases or active deployments.
 - Database standard: PostgreSQL.
 - Production database primary: Neon PostgreSQL.
 - Database migration alternative: Supabase PostgreSQL.
@@ -86,7 +85,7 @@ Production has been deployed. Never assume a target has no business data based o
 ## Architecture rules
 
 - ALSVID remains a modular monolith unless an ADR proves a real need for service separation.
-- Public product pages (FC1, FC2/Pilot X5, L7, L8 and accessories) are routes in the shared Next.js Web application deployed as Cloud Run Service `alsvid-web`; shared backend requests use `alsvid-api`. Product models are not deployment units. Never create one Cloud Run service per product/model without a new owner-approved ADR.
+- Public product pages (FC1, FC2/Pilot X5, L7, L8 and accessories) are routes in the shared Next.js Web application, with existing Cloud Run `alsvid-web`/`alsvid-api` as the public release target and optional authorized local Web/API as another runtime against the same business data. Product models are not deployment units. Never create one Cloud Run service per product/model without a new owner-approved ADR.
 - Follow `docs/DOMAIN_STRUCTURE.md`.
 - `domains/<domain>/src/index.ts` is a public facade only once a domain is encapsulated.
 - Core/application code cannot import provider SDKs or framework transport code.
