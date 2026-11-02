@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: '/admin-legacy', destination: '/admin', permanent: true },
+      { source: '/admin-preview', destination: '/admin', permanent: true },
       { source: '/admin/workbench-v2', destination: '/admin', permanent: true },
       { source: '/admin/workbench-v3', destination: '/admin', permanent: true },
     ];
