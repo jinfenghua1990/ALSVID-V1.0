@@ -32,6 +32,21 @@
 - `apps/web/app/_design/record-links.ts` 对订单、实车、售后、Partner 的内部链接严格使用 UUID。
 - 老采购/订单快照与证据记录里存在历史 UUID：不能靠删除新表的 UUID 列把数据关联切断。
 
+## 生产库只读审计快照（Neon ALSVID Production，2026-11-02）
+
+使用已经连接的 **ALSVID Production** Neon 项目执行 PostgreSQL 目录查询及聚合 `SELECT`，未运行 DDL/DML，没有更改生产数据。**这是 2026-11-02 的时间点快照，不是持续同步的在线指标。**
+
+- 当前共有 **118 个主键列**：**103 个 UUID 主键列，0 个 BIGINT 主键列**（其余是文本等其他类型）。
+- 当前外键涉及 **320 个列**：其中 **281 个 UUID 外键列、34 个 BIGINT 外键列**，另有其他数据类型。BIGINT 外键并不代表它的目标实体已经有 BIGINT 主键。
+- 生产库确有 6 个商品、6 个 SKU（均存在唯一数字号，未发现重复或 Product/SKU 所属关系错配）；2 个仓库；采购单、生产单、官网销售订单、库存流水、物流运单和 Finance 文档均为 0 条。
+- 权限、账户、会话、审计日志等并非空库；严禁以核心订单表为 0 推断可以整体删库重建。
+- 按 `pg_stat_user_tables` 只读统计仍有身份/权限/审计等活动记录，因此所有映射均应在真实备份和跨域引用核验后切换。
+- 核查 `inventory.movements` 与 `logistics.shipment_cargo` 的数字 SKU 冗余投影：当前错配数量均为 0（这些表当前无流水，不能据此推断今后写入均正确）。
+
+### 优先迁移顺序
+
+商品/数字 SKU → Product-Engineering-定价及商城装修 → 空的采购/生产/物流/库存业务单据与仓库设置 → Finance/客户/售后 → Identity/Partner 及外部回调。**即使相关业务表当前没有记录，程序与数据库外键仍必须同时升级，不能仅修改 PostgreSQL 字段。**
+
 ## 三、实现顺序：每一批在完成全部生产/消费方的改造后才能转正
 
 **阶段 A：真实数据只读预检。** 运行 `docs/sql/identifier-preflight-readonly.sql`，记录生产库约束、实体数量、数字重复、SKU 关系不一致、所有 UUID FK 依赖和历史外部回调；先建立加密备份和还原演练。不能只根据 GitHub 中的迁移推断生产行数。
