@@ -104,3 +104,61 @@ $$;
 CREATE TRIGGER logistics_shipment_po_cargo_guard
 BEFORE INSERT ON logistics.shipment_cargo
 FOR EACH ROW EXECUTE FUNCTION logistics.require_po_cargo_match();
+
+-- Reuse existing receiving_handoffs and inventory_received marker, preserving
+-- the original anti-fake-stock and dealer-direct constraints for both warehouses.
+CREATE OR REPLACE FUNCTION logistics.validate_receiving_handoff() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+  route text;
+  shipment_destination uuid;
+  cargo_shipment uuid;
+  movement_destination uuid;
+  movement_reference_type text;
+  movement_reference_id uuid;
+BEGIN
+  SELECT route_type,destination_location_id INTO route,shipment_destination
+  FROM logistics.shipments WHERE id=NEW.shipment_id;
+  IF route IS NULL OR route NOT IN ('FACTORY_TO_GERMANY_WAREHOUSE','FACTORY_TO_DOMESTIC_WAREHOUSE') THEN
+    RAISE EXCEPTION 'Dealer-direct shipment cannot create a warehouse receiving handoff';
+  END IF;
+  IF shipment_destination IS DISTINCT FROM NEW.destination_location_id THEN
+    RAISE EXCEPTION 'Receiving handoff must use shipment destination location';
+  END IF;
+  SELECT shipment_id INTO cargo_shipment FROM logistics.shipment_cargo WHERE id=NEW.cargo_id;
+  IF cargo_shipment IS DISTINCT FROM NEW.shipment_id THEN
+    RAISE EXCEPTION 'Receiving handoff cargo must belong to the shipment';
+  END IF;
+  SELECT destination_location_id,reference_type,reference_id
+  INTO movement_destination,movement_reference_type,movement_reference_id
+  FROM inventory.movements WHERE id=NEW.inventory_movement_id;
+  IF movement_destination IS DISTINCT FROM NEW.destination_location_id
+    OR movement_reference_type IS DISTINCT FROM 'SHIPMENT'
+    OR movement_reference_id IS DISTINCT FROM NEW.shipment_id THEN
+    RAISE EXCEPTION 'Receiving handoff Inventory movement must be shipment receipt at destination';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION logistics.validate_inventory_received_marker() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE cargo_count integer; handoff_count integer;
+BEGIN
+  IF OLD.inventory_received_at IS NOT NULL AND NEW.inventory_received_at IS DISTINCT FROM OLD.inventory_received_at THEN
+    RAISE EXCEPTION 'Shipment Inventory receiving marker is immutable';
+  END IF;
+  IF NEW.inventory_received_at IS NOT NULL AND OLD.inventory_received_at IS NULL THEN
+    IF NEW.route_type NOT IN ('FACTORY_TO_GERMANY_WAREHOUSE','FACTORY_TO_DOMESTIC_WAREHOUSE')
+      OR NEW.status <> 'DELIVERED' THEN
+      RAISE EXCEPTION 'Only delivered warehouse-route shipments can be marked received into Inventory';
+    END IF;
+    SELECT count(*)::int INTO cargo_count FROM logistics.shipment_cargo WHERE shipment_id=NEW.id;
+    SELECT count(*)::int INTO handoff_count FROM logistics.receiving_handoffs WHERE shipment_id=NEW.id;
+    IF cargo_count=0 OR handoff_count <> cargo_count THEN
+      RAISE EXCEPTION 'Every shipment cargo line requires an Inventory receiving handoff';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
