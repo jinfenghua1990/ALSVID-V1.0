@@ -20,7 +20,7 @@
 03-Systems/       Official/Shop、Admin、Dealer、My、Supplier 后续目标
 04-SOP/           产品、制造、质量、销售、售后流程
 05-AI-Knowledge/  客服、导购、经销商和售后答案
-06-Shopify/       旧 Shopify 集成资料（历史/未来可选渠道，非首期依赖）
+06-Shopify/       只读历史集成资料（已退役；不得作为新功能与部署依据）
 99-Templates/     新建知识文件模板
 ```
 

@@ -10,7 +10,7 @@ test('retired Shopify provider cannot be registered, including by direct Commerc
   const auth=await actor(db);
   const service=createCommerceService(db,audit);
   await assert.rejects(
-   service.createChannel(auth,{provider:'SHOPIFY',channelKey:`retired-${suffix()}`,displayName:'Retired Channel',externalAccountId:'retired.example'}),
+   service.createChannel(auth,{provider:'SHOPIFY' as unknown as 'OTHER',channelKey:`retired-${suffix()}`,displayName:'Retired Channel',externalAccountId:'retired.example'}),
    /Provider retired or unsupported/,
   );
   await assert.rejects(
