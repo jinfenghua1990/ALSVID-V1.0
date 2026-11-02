@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { randomUUID } from 'node:crypto';
 import { Database } from '@alsvid/database';
-import {createInventoryService} from '@alsvid/inventory';
+import type { ProductionInventoryPort } from './application/ports.js';
 import {createProductionService,ProductionConflictError} from './index.js';
 
 const hasDatabase = Boolean(process.env.DATABASE_URL);
@@ -238,7 +238,28 @@ test('completed QC production only enters factory-owned stock on real physical r
    const factoryId=await factory(db,true),spec=await buildSpec(db,true);
    const actor={userId,permissions:['production.write','production.release','qc.inspect','inventory.move','inventory.read','inventory.reserve']};
    const audit={async record(){}};
-   const inventory=createInventoryService(db,audit);
+   // Adapter to inventory's real append-only ledger without importing another domain.
+   // This keeps Production's architectural boundary explicit.
+   const inventory:ProductionInventoryPort={
+     async postMovement(_actor,input,executor){
+       const result=await (executor??db).query<{id:string}>(
+         `INSERT INTO inventory.movements(
+           movement_type,item_kind,sku_id,quantity,unit,destination_location_id,
+           reference_type,reference_id,reason,idempotency_key,correlation_id,created_by
+         ) VALUES ('RECEIPT','SKU',$1,$2,'EA',$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+         [input.itemId,input.quantity,input.destinationLocationId,input.referenceType,
+          input.referenceId,input.reason,input.idempotencyKey,input.correlationId,userId]
+       );
+       return {id:result.rows[0]!.id};
+     }
+   };
+   const balanceAt=async()=>{
+     const result=await db.query<{balance:string}>(
+       `SELECT COALESCE(sum(on_hand),0)::text AS balance FROM inventory.v_location_balances
+        WHERE sku_id=$1 AND location_id=$2`,[spec.skuId,location.rows[0]!.id]
+     );
+     return Number(result.rows[0]?.balance??0);
+   };
    const production=createProductionService(db,audit,inventory);
    const warehouse=await db.query<{id:string}>(`INSERT INTO warehouse.warehouses(code,name,partner_id,country_code) VALUES ($1,'Contract factory warehouse',$2,'CN') RETURNING id`,['WF'+suffix(),factoryId]);
    const location=await db.query<{id:string}>(`INSERT INTO warehouse.locations(warehouse_id,code,name,location_type) VALUES ($1,'FG','QC-passed finished goods','STORAGE') RETURNING id`,[warehouse.rows[0]!.id]);
@@ -253,7 +274,7 @@ test('completed QC production only enters factory-owned stock on real physical r
    await production.completeOrder(actor,order.id);
    const first=await production.receiveFinishedGoods(actor,order.id,{locationId:location.rows[0]!.id,quantity:1});
    assert.equal(first.remaining,1);
-   assert.equal(Number(await inventory.balanceAt({itemKind:'SKU',itemId:spec.skuId,unit:'EA',locationId:location.rows[0]!.id})),1);
+   assert.equal(await balanceAt(),1);
    await assert.rejects(production.receiveFinishedGoods(actor,order.id,{locationId:location.rows[0]!.id,quantity:2}),ProductionConflictError);
    const last=await production.receiveFinishedGoods(actor,order.id,{locationId:location.rows[0]!.id,quantity:1});
    assert.equal(last.remaining,0);
