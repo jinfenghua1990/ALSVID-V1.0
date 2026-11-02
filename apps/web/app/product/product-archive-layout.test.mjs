@@ -11,10 +11,16 @@ test('canonical admin product module embeds the live single-source product archi
   assert.match(renderer, /import ProductClient from '\.\.\/product\/product-client'/);
 });
 
-test('product archive is list-first with advanced sections collapsed', () => {
+test('product archive is list-first; version and SKU editing happens in a dialog', () => {
   assert.ok(client.indexOf('id="vehicle-models"') < client.indexOf('id="product-types"'));
-  assert.ok(client.indexOf('id="vehicle-models"') < client.indexOf('id="models"'));
-  assert.match(client, /id="product-maintenance-panel"/);
+  assert.doesNotMatch(client, /id="product-maintenance-panel"|配置版本与 SKU 管理|配置版本与 SKU 明细/);
+  assert.match(client, /aria-label="编辑车型配置及 SKU"/);
+  assert.match(client, /setManageModelId\(model.id\)/);
+  assert.match(client, /aria-label="商业配置版本"/);
+  assert.match(client, /aria-label="车型 SKU 规格"/);
+  assert.match(client, /创建版本/);
+  assert.match(client, /创建 SKU/);
+  assert.match(css, /\.variantSkuDialog/);
   assert.match(client, /id="parts-library-panel"/);
   assert.match(client, /id="production-bom"/);
   assert.doesNotMatch(client, /id="engineering-panel"/);
