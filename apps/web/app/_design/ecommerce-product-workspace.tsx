@@ -122,6 +122,16 @@ export function EcommerceProductWorkspace() {
     void load();
   }, []);
 
+  // Canonical operator deep links use the stable six-digit Product ID.
+  // Old UUID modelId bookmarks remain readable for compatibility.
+  useEffect(()=>{
+    if(!data)return;
+    const productId=new URLSearchParams(window.location.search).get('productId');
+    if(!productId)return;
+    const selected=data.catalog.models.find(model=>String(model.product_id)===productId);
+    setSelectedId(selected?.id??'');
+  },[data]);
+
   const allRows = useMemo<ProductRowData[]>(() => {
     if (!data) return [];
     const publicationByModel = new Map(data.publications.map(item => [item.model_id, item]));
@@ -199,7 +209,11 @@ export function EcommerceProductWorkspace() {
 
   function selectModel(id: string) {
     setSelectedId(id);
-    window.history.replaceState({}, '', `/admin/ecommerce/products?modelId=${encodeURIComponent(id)}`);
+    const product=data?.catalog.models.find(model=>model.id===id);
+    const key=product&&/^[1-9][0-9]{5}$/.test(String(product.product_id))
+      ? 'productId='+encodeURIComponent(String(product.product_id))
+      : 'modelId='+encodeURIComponent(id);
+    window.history.replaceState({}, '', '/admin/ecommerce/products?'+key);
   }
 
   function toggle(id: string) {
@@ -334,7 +348,7 @@ export function EcommerceProductWorkspace() {
         {['ALL', 'PUBLISHED', 'WITHDRAWN', 'IN_REVIEW', 'DRAFT', 'UNLISTED'].map(key => <button key={key} type="button" className={styles.tab} aria-pressed={status === key} onClick={() => { setStatus(key); setSelectedIds(new Set()); }}>{key === 'ALL' ? '全部' : publicationLabel[key]} <strong>{statusCounts[key] ?? 0}</strong></button>)}
       </nav>
       <form className={styles.filters} onSubmit={applyFilters}>
-        <label>商品ID<input className="av-search" value={draft.id} onChange={event => setDraft({ ...draft, id: event.target.value })} placeholder="输入商品 ID" /></label>
+        <label>数字商品 ID<input className="av-search" inputMode="numeric" pattern="[0-9]{0,6}" maxLength={6} value={draft.id} onChange={event => setDraft({ ...draft, id: event.target.value.replace(/\D/g,'').slice(0,6) })} placeholder="6 位商品 ID" /></label>
         <label>商品编码<input className="av-search" value={draft.code} onChange={event => setDraft({ ...draft, code: event.target.value })} placeholder="输入商品编码" /></label>
         <label>SKU 编码<input className="av-search" value={draft.sku} onChange={event => setDraft({ ...draft, sku: event.target.value })} placeholder="输入 SKU 编码" /></label>
         <label>商品名称<input className="av-search" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="输入商品名称" /></label>
@@ -378,13 +392,14 @@ function ProductRow({ row, market, onSelect, chosen, checked, toggle, busy }: { 
   const prices = market === 'ALL' ? row.prices : row.prices.filter(price => price.marketCountry === market);
   const available = stockTotal(stock);
   const onHand = stockTotal(stock, 'on_hand');
-  const href = `/admin/ecommerce/products?modelId=${encodeURIComponent(model.id)}`;
+  const isNumericId=/^[1-9][0-9]{5}$/.test(String(model.product_id));
+  const href = isNumericId ? `/admin/ecommerce/products?productId=${model.product_id}` : `/admin/ecommerce/products?modelId=${encodeURIComponent(model.id)}`;
   const image = publication?.image_path?.startsWith('/') && !publication.image_path.startsWith('//') ? publication.image_path : '';
   return <tr data-selected={chosen}>
     <td><input type="checkbox" aria-label={`选择 ${model.code}`} checked={checked} onChange={() => toggle(model.id)} disabled={busy} /></td>
     <td><div className={styles.product}>
       <div className={styles.image}><span>暂无图片</span>{image ? <img src={image} alt="" onError={event => { event.currentTarget.hidden = true; }} /> : null}</div>
-      <a href={href} onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0) { event.preventDefault(); onSelect(model.id); } }}><strong>{publication?.title_zh || model.name || model.code}</strong><span>商品编码：{model.code}</span><span>商品 ID：{model.product_id || '未分配'}</span></a>
+      <a href={href} onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0) { event.preventDefault(); onSelect(model.id); } }}><strong>{publication?.title_zh || model.name || model.code}</strong><span>商品编码：{model.code}</span><span>数字商品 ID：{model.product_id || '未分配'}</span></a>
     </div></td>
     <td>{productTypeLabel[model.product_type_code] ?? model.product_type_code}<span className="av-table-subtext">{platform?.name || platform?.code || '未关联技术平台'}</span></td>
     <td>{skus.length} 个<span className="av-table-subtext">{skus.slice(0, 2).map(item => item.sku).join('、') || '尚未建立 SKU'}{skus.length > 2 ? ` 等 ${skus.length} 个` : ''}</span></td>
@@ -393,7 +408,7 @@ function ProductRow({ row, market, onSelect, chosen, checked, toggle, busy }: { 
     <td>未接入<span className="av-table-subtext">渠道预留尚未核算</span></td>
     <td><span className="av-tag" data-tone={publication?.status === 'PUBLISHED' ? 'good' : publication?.status === 'IN_REVIEW' ? 'warn' : undefined}>{publication ? publicationLabel[publication.status] ?? publication.status : publicationLabel.UNLISTED}</span></td>
     <td>{date(model.created_at)}<span className="av-table-subtext">更新 {date(model.updated_at)}</span></td>
-    <td><div className={styles.rowActions}><button type="button" onClick={() => onSelect(model.id)}>配置</button><button type="button" onClick={() => { onSelect(model.id); window.requestAnimationFrame(() => document.getElementById('product-prices')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>价格管理</button></div></td>
+    <td><div className={styles.rowActions}><button type="button" onClick={() => onSelect(model.id)}>配置</button><button type="button" onClick={() => { onSelect(model.id); window.requestAnimationFrame(() => document.getElementById('product-prices')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>价格管理</button>{publication?.status==='PUBLISHED'&&model.product_type_code==='BIKE'&&isNumericId?<a href={`/de/explore/${model.product_id}`} target="_blank" rel="noopener noreferrer">官网详情</a>:null}</div></td>
   </tr>;
 }
 

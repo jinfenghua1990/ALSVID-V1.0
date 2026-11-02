@@ -57,3 +57,12 @@
 @media(max-width:1120px){.editorLayout{grid-template-columns:195px minmax(0,1fr) 235px}.noticeStatus{display:none}}
 @media(max-width:850px){.editorLayout{grid-template-columns:175px minmax(0,1fr);height:760px}.rightPanel{grid-column:1/-1;border-left:0;border-top:1px solid #e0e5e0;max-height:240px}.stylesMount{min-height:160px}.canvasPanel{grid-column:2;grid-row:1}.leftPanel{grid-column:1;grid-row:1}.panelHeader span{display:none}}
 @media(max-width:620px){.title{font-size:22px}.editorLayout{grid-template-columns:1fr;height:auto;min-height:0}.leftPanel{grid-column:1;grid-row:1;max-height:250px;border-right:0;border-bottom:1px solid #e0e5e0}.canvasPanel{grid-column:1;grid-row:2;min-height:520px}.rightPanel{grid-column:1;grid-row:3;max-height:260px}.notice{align-items:flex-start}.notice p{font-size:10px}.actions{width:100%}.actions button{flex:1}}
+
+.productBinder{display:flex;align-items:end;flex-wrap:wrap;gap:10px;border:1px solid #dfe4df;border-radius:9px;padding:12px;background:#fff}
+.productBinder>div{flex:1 1 220px}
+.productBinder strong{font-size:12px}
+.productBinder p{font-size:11px;color:#79847b;margin:4px 0 0;line-height:1.5}
+.productBinder label{display:grid;gap:5px;font-size:11px;color:#718075;min-width:120px}
+.productBinder select{min-height:36px;font-size:12px;background:#fff;border:1px solid #d9dfd9;padding:7px;border-radius:7px;color:#344138}
+.productBinder label:nth-of-type(1){min-width:260px}
+.productBinder .error{flex-basis:100%;margin:0}
