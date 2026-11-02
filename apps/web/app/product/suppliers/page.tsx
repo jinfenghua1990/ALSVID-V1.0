@@ -1,7 +1,7 @@
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../../_lib/portal-access';
 import { PortalSectionPage } from '../../_components/portal-section-page';
-import { navigationFor } from '../../app-navigation';
+import { navigationFor } from '../_design/admin-navigation';
 
 const cards = [
   { eyebrow: '供应关系', title: '车型供应商', description: '查看车型、零部件与真实供应商之间的业务关系。' },

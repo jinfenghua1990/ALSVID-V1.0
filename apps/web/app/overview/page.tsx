@@ -1,6 +1,6 @@
 import { requireInternalPreviewSession } from '../_lib/portal-access';
 import { AppShell } from '@alsvid/ui';
-import { navigationFor } from '../app-navigation';
+import { navigationFor } from '../_design/admin-navigation';
 import styles from './overview.module.css';
 
 /** 数据分析分区（对齐顶部导航「数据」模块锚点） */
