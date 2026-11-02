@@ -1,6 +1,7 @@
 import { type CanActivate, type ExecutionContext, HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PUBLIC_RATE_LIMIT, type PublicRateLimitOptions } from './public-rate-limit.decorator.js';
+import { identityService } from '../runtime.js';
 
 interface Window {
   count: number;
@@ -39,8 +40,9 @@ function clientAddress(request: LimitedRequest): string {
 
 /**
  * Fixed-window limiter for public, unauthenticated writes. It is transport-level
- * abuse control, not a business rule, and is intentionally in-process: a durable
- * cross-instance limiter is a separate follow-up. Configure the API with a
+ * abuse control, not a business rule. Sensitive authentication routes use the
+ * existing PostgreSQL-backed atomic counter across instances; other marked
+ * routes may use the in-process limiter. Configure the API with a
  * trusted proxy so `request.ip` is the caller and not the gateway.
  */
 @Injectable()
@@ -49,21 +51,23 @@ export class PublicRateLimitGuard implements CanActivate {
 
   constructor(@Inject(Reflector) private readonly reflector: Reflector) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> {
     const options = this.reflector.getAllAndOverride<PublicRateLimitOptions | undefined>(PUBLIC_RATE_LIMIT, [
       context.getHandler(),
       context.getClass(),
     ]);
     if (!options) return true;
-    if (process.env.ALSVID_PUBLIC_RATE_LIMIT_DISABLED === 'true') return true;
+    // Never allow an environment flag to silently bypass authentication abuse limits in Production.
+    if (process.env.ALSVID_PUBLIC_RATE_LIMIT_DISABLED === 'true' && process.env.NODE_ENV !== 'production') return true;
 
     const request = context.switchToHttp().getRequest<LimitedRequest>();
     const scope = `${context.getClass().name}.${context.getHandler().name}`;
     const buckets: Array<[string, number]> = [];
+    if (options.perInstance) buckets.push(['instance', options.perInstance]);
     if (options.perClient) buckets.push([`client:${clientAddress(request)}`, options.perClient]);
     const email = bodyEmail(request.body);
     if (options.perEmail && email) buckets.push([`email:${email}`, options.perEmail]);
-    if (options.perInstance) buckets.push(['instance', options.perInstance]);
+    if (options.shared) return this.enforceShared(context, scope, buckets, options.windowMs);
 
     this.sweep();
     const now = Date.now();
@@ -83,6 +87,24 @@ export class PublicRateLimitGuard implements CanActivate {
         );
       }
       window.count += 1;
+    }
+    return true;
+  }
+
+  private async enforceShared(context: ExecutionContext, scope: string, buckets: Array<[string, number]>, windowMs: number): Promise<boolean> {
+    // Existing identity.auth_rate_limits uses atomic INSERT ... ON CONFLICT,
+    // so scaling Cloud Run does not multiply the allowed quota. Fail closed
+    // when the shared database cannot be reached; never send auth emails first.
+    for (const [target, limit] of buckets) {
+      const allowed = await identityService.consumePublicAuthRateLimit(`${scope}:${target}`, windowMs, limit);
+      if (!allowed) {
+        const retryAfter = Math.max(1, Math.ceil(windowMs / 1000));
+        context.switchToHttp().getResponse<LimitedResponse>()?.header?.('retry-after', String(retryAfter));
+        throw new HttpException(
+          { statusCode: HttpStatus.TOO_MANY_REQUESTS, message: 'Too many requests. Please retry later.', retryAfter },
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
     }
     return true;
   }
