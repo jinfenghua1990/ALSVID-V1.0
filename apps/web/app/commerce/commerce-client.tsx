@@ -162,7 +162,6 @@ export default function CommerceClient({ embedded = false }: { embedded?: boolea
   const orderLines = selectedOrder ? commerce.lines.filter((item) => item.order_id === selectedOrder.id) : [];
   const orderFulfillments = selectedOrder ? commerce.fulfillments.filter((item) => item.order_id === selectedOrder.id) : [];
   const openExceptions = commerce.exceptions.filter((item) => item.status === 'OPEN');
-  const shopifyChannels = commerce.channels.filter((item) => item.provider === 'SHOPIFY');
   const amazonChannels = commerce.channels.filter((item) => item.provider === 'AMAZON');
   const metrics = useMemo(() => ({
     channels: commerce.channels.length,
@@ -204,7 +203,7 @@ export default function CommerceClient({ embedded = false }: { embedded?: boolea
         }),
       });
       target.reset();
-      setMessage(provider === 'AMAZON' ? 'Amazon 渠道已登记；SP-API 仍处于待配置状态。' : 'Shopify 渠道已登记。');
+      setMessage(provider === 'AMAZON' ? 'Amazon 渠道已登记；SP-API 仍处于待配置状态。' : '外部渠道已登记。');
       await reload();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '无法登记渠道');
@@ -231,26 +230,6 @@ export default function CommerceClient({ embedded = false }: { embedded?: boolea
       await reload();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '无法保存商品映射');
-    }
-  }
-
-  async function ingestShopify(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    try {
-      const payload = JSON.parse(String(form.get('payload') ?? '{}')) as Record<string, unknown>;
-      await api(`/v1/integrations/shopify/${form.get('channelId')}/ingest`, {
-        method: 'POST',
-        body: JSON.stringify({
-          webhookId: form.get('webhookId'), eventId: form.get('eventId') || undefined, topic: form.get('topic'),
-          shopDomain: form.get('shopDomain'), apiVersion: form.get('apiVersion') || undefined,
-          triggeredAt: new Date().toISOString(), payload,
-        }),
-      });
-      setMessage('Shopify 交付证据已写入并完成规范化处理。');
-      await reload();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : '无法写入 Shopify 交付证据');
     }
   }
 
@@ -297,12 +276,6 @@ export default function CommerceClient({ embedded = false }: { embedded?: boolea
 
       <section id="external-channels" className={styles.providerGrid}>
         <article className={styles.providerCard}>
-          <div className={styles.providerHead}><span>SHOPIFY</span><strong>{shopifyChannels.length ? '已登记' : '未配置'}</strong></div>
-          <h2>Shopify</h2>
-          <p>已保留的可选渠道适配基础；首期官网交易不依赖 Shopify，渠道登记不代表店铺已连接或正在销售。</p>
-          <div className={styles.providerMeta}>{shopifyChannels.length} 个渠道 · Webhook adapter 已实现</div>
-        </article>
-        <article className={styles.providerCard}>
           <div className={styles.providerHead}><span>AMAZON</span><strong className={styles.pending}>{amazonChannels.length ? '渠道已登记 · SP-API 待配置' : '未配置 · SP-API 待接入'}</strong></div>
           <h2>Amazon Marketplace</h2>
           <p>本阶段只建立正式渠道身份、映射和管理入口。不会伪造 Seller Central/SP-API 已连接，也不会在页面保存 token 或密钥。</p>
@@ -320,11 +293,11 @@ export default function CommerceClient({ embedded = false }: { embedded?: boolea
       <section className={styles.topGrid}>
         <form className={styles.card} onSubmit={createChannel}>
           <span>渠道登记</span><h2>登记外部电商渠道</h2>
-          <select name="provider" required defaultValue="SHOPIFY">
-            <option value="SHOPIFY">Shopify</option><option value="AMAZON">Amazon Marketplace</option><option value="OTHER">其他渠道</option>
+          <select name="provider" required defaultValue="AMAZON">
+            <option value="AMAZON">Amazon Marketplace</option><option value="OTHER">其他渠道</option>
           </select>
-          <div className={styles.inline}><input name="channelKey" placeholder="amazon-de / shopify-eu" required/><input name="displayName" placeholder="ALSVID Amazon Germany" required/></div>
-          <input name="externalAccountId" placeholder="Seller ID / store.myshopify.com" required/>
+          <div className={styles.inline}><input name="channelKey" placeholder="amazon-de / other-eu" required/><input name="displayName" placeholder="ALSVID Amazon Germany" required/></div>
+          <input name="externalAccountId" placeholder="Seller ID / 外部渠道账号" required/>
           <input name="marketplace" placeholder="Amazon Marketplace（可选，如 DE）"/>
           <select name="defaultDealerPartnerId" defaultValue=""><option value="">不设置默认经销商</option>{dealerPartners.map((item) => <option key={item.id} value={item.id}>{item.partnerCode} · {item.displayName}</option>)}</select>
           <label className={styles.check}><input type="checkbox" name="requiresDealer"/> 此渠道要求经销商映射</label>
@@ -332,7 +305,7 @@ export default function CommerceClient({ embedded = false }: { embedded?: boolea
         </form>
         <div className={styles.rule}>
           <span>职责边界</span><h2>ALSVID 不变成第二套 OMS</h2>
-          <p>Shopify/Amazon 负责各自的店铺、下单、支付与平台履约。ALSVID 负责产品主数据、外部订单事实映射、异常与跨系统关联。Amazon ASIN、Seller SKU 或订单号都只是外部引用，不能自动生成 ALSVID SKU。</p>
+          <p>外部平台负责其自身的店铺、下单、支付与履约。ALSVID 负责产品主数据、外部订单事实映射、异常与跨系统关联。外部商品标识和订单号不能自动生成 ALSVID SKU。历史 Shopify 渠道仅保留只读数据，不再开放写入或重放。</p>
         </div>
       </section>
 
@@ -348,24 +321,13 @@ export default function CommerceClient({ embedded = false }: { embedded?: boolea
       <section className={styles.topGrid}>
         <form className={styles.card} onSubmit={mapVariant}>
           <span>SKU 映射</span><h2>外部商品 → ALSVID SKU</h2>
-          <select name="channelId" required defaultValue=""><option value="" disabled>选择渠道</option>{commerce.channels.map((item) => <option key={item.id} value={item.id}>{providerLabel(item.provider)} · {item.channel_key}</option>)}</select>
-          <input name="externalProductId" placeholder="商品 ID：Shopify Product ID / Amazon ASIN"/>
-          <div className={styles.inline}><input name="externalVariantId" placeholder="映射键：Shopify Variant ID / Amazon Seller SKU" required/><input name="externalSku" placeholder="外部 SKU（可选）"/></div>
+          <select name="channelId" required defaultValue=""><option value="" disabled>选择渠道</option>{commerce.channels.filter((item) => item.provider !== 'SHOPIFY').map((item) => <option key={item.id} value={item.id}>{providerLabel(item.provider)} · {item.channel_key}</option>)}</select>
+          <input name="externalProductId" placeholder="商品 ID：Amazon ASIN / 外部 Product ID"/>
+          <div className={styles.inline}><input name="externalVariantId" placeholder="映射键：Amazon Seller SKU / 外部 Variant ID" required/><input name="externalSku" placeholder="外部 SKU（可选）"/></div>
           <select name="skuId" required defaultValue=""><option value="" disabled>选择 ALSVID SKU</option>{skus.map((item) => <option key={item.id} value={item.id}>{item.sku} · {item.name}</option>)}</select>
           <button>保存映射</button>
         </form>
-        <form className={styles.card} onSubmit={ingestShopify}>
-          <span>SHOPIFY ADAPTER 测试 / 重放基础</span><h2>写入保留的 Shopify Delivery</h2>
-          <select name="channelId" required defaultValue="" onChange={(event) => { const channel = commerce.channels.find((item) => item.id === event.target.value); const form = event.currentTarget.form; if (form && channel) { const field = form.elements.namedItem('shopDomain') as HTMLInputElement | null; if (field) field.value = channel.external_account_id; } }}>
-            <option value="" disabled>选择 Shopify 渠道</option>{shopifyChannels.map((item) => <option key={item.id} value={item.id}>{item.channel_key}</option>)}
-          </select>
-          <div className={styles.inline}><input name="webhookId" placeholder="X-Shopify-Webhook-Id" required/><input name="eventId" placeholder="X-Shopify-Event-Id"/></div>
-          <div className={styles.inline}><select name="topic"><option>orders/create</option><option>orders/updated</option><option>orders/cancelled</option><option>fulfillments/create</option><option>fulfillments/update</option><option>fulfillments/cancel</option></select><input name="apiVersion" defaultValue="2026-10"/></div>
-          <input name="shopDomain" placeholder="store.myshopify.com" required/>
-          <textarea name="payload" rows={5} defaultValue={'{"id":"1001","name":"#1001","currency":"EUR","subtotal_price":"0","total_price":"0","line_items":[]}'}/>
-          <button>写入 Delivery Evidence</button>
-          <small className={styles.formHint}>Amazon 此处不会出现测试入口；必须等正式 SP-API adapter 后再开放。</small>
-        </form>
+
       </section>
 
       <section id="external-orders" className={styles.orderGrid}>
@@ -405,8 +367,8 @@ export default function CommerceClient({ embedded = false }: { embedded?: boolea
           {!openExceptions.length ? <p className={styles.empty}>{sourceStatus.commerce === 'loading' ? '正在读取异常记录…' : sourceStatus.commerce === 'error' || sourceErrors.commerce ? '订单异常来源不可用，无法确认是否存在待处理异常。' : '当前没有待处理映射异常。'}</p> : null}
         </div>
         <div className={styles.panel}>
-          <div className={styles.sectionHead}><span>集成证据</span><h2>Delivery receipts & attempts</h2><p>当前证据流仍来自 Shopify Webhook；Amazon SP-API adapter 尚未接入。</p></div>
-          {integrations.receipts.slice(0, 30).map((receipt) => { const attempt = latestAttempt(receipt.id); const channel = channelFor(receipt.channel_id); return <article className={styles.receipt} key={receipt.id}><div><b>{providerLabel(channel?.provider ?? 'OTHER')} · {receipt.topic}</b><span>{receipt.channel_key} · {receipt.provider_event_id}</span><small>{attempt ? `${statusLabel(attempt.outcome)} · 第 ${attempt.attempt_number} 次` : '尚无处理尝试'}</small></div>{channel?.provider === 'SHOPIFY' ? <button onClick={() => void action(`/v1/integrations/shopify/receipts/${receipt.id}/replay`)}>重放</button> : null}</article>; })}
+          <div className={styles.sectionHead}><span>集成证据</span><h2>Delivery receipts & attempts</h2><p>历史事件仅供查询、审计，不再允许重放已退役 Shopify Webhook；Amazon SP-API 尚未接入。</p></div>
+          {integrations.receipts.slice(0, 30).map((receipt) => { const attempt = latestAttempt(receipt.id); const channel = channelFor(receipt.channel_id); return <article className={styles.receipt} key={receipt.id}><div><b>{providerLabel(channel?.provider ?? 'OTHER')} · {receipt.topic}</b><span>{receipt.channel_key} · {receipt.provider_event_id}</span><small>{attempt ? `${statusLabel(attempt.outcome)} · 第 ${attempt.attempt_number} 次` : '尚无处理尝试'}</small></div></article>; })}
           {!integrations.receipts.length ? <p className={styles.empty}>{sourceStatus.integrations === 'loading' ? '正在读取渠道事件…' : sourceStatus.integrations === 'error' || sourceErrors.integrations ? '渠道事件来源不可用，无法确认是否已有集成证据。' : '还没有保留的集成证据。'}</p> : null}
         </div>
       </section>
