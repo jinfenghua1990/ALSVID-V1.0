@@ -1,5 +1,7 @@
 # Deployment Model
 
+> Current operations decision (2026-11-02): authorized local Production Web/API/Gateway is an optional **local-first application runtime** connected to the same Neon/R2/Secret Manager authority used by the existing Cloud Run HTTPS services. Its actual startup and data/access acceptance are not yet verified. The local **isolated Test** stack described below is different and must not use Production secrets. See `docs/LOCAL_PRODUCTION.md`.
+
 ## Local development and Test
 
 At the current solo/small-team stage, the M1 workstation is the primary development and Test environment. ALSVID does **not** maintain a separate Cloud Run Test environment by default.
@@ -25,17 +27,17 @@ A separate cloud Test environment is not part of the current architecture. Recon
 2. repeated defects appear only in Cloud Run or other cloud-specific services and cannot be reproduced locally;
 3. realistic cloud load, IAM, region, managed-service or end-to-end infrastructure testing becomes necessary.
 
-Until one of those conditions exists, maintaining a second cloud runtime is unnecessary operational overhead. The local M1 remains development/Test only and is never the production authority.
+Until one of those conditions exists, maintaining a second cloud **Test** runtime is unnecessary. Authorized local Production application hosting is a separate opt-in mode; it never changes the Production database authority.
 
 ## Selected production placement
 
-The production architecture is fixed by ADR 0003:
+Current public-cloud release topology is retained from ADR 0003, with the local Production application option documented separately:
 
 | Artifact | Production authority |
 | --- | --- |
 | Software / migrations / CI | GitHub `main` + commit SHA |
-| Web | Google Cloud Run Service `alsvid-web` |
-| API | Google Cloud Run Service `alsvid-api` |
+| Web | Existing public Cloud Run `alsvid-web`; optional authorized local Docker Web |
+| API | Existing Cloud Run `alsvid-api`; optional authorized local Docker API |
 | Worker | Not deployed; no registered production handlers or queued jobs |
 | Migrations | Google Cloud Run Job `alsvid-migrate` |
 | Container images | Google Artifact Registry |
@@ -43,7 +45,7 @@ The production architecture is fixed by ADR 0003:
 | Binary business files | Cloudflare R2 |
 | Runtime secrets | Google Cloud Secret Manager |
 | Runtime logs | Google Cloud Logging |
-| Offline backup layer | Q4 plus independent database/object copies |
+| Independent backup | Not yet accepted as complete; do not assume a personal Q4 is in the Production recovery topology |
 
 ### Product hosting boundary
 
@@ -51,7 +53,7 @@ All public storefront and product-detail routes run inside the single Next.js We
 
 The production workflows manage `alsvid-web` and `alsvid-api`; neither deploys `alsvid-fc1` nor `alsvid-pilot-x5`. Those names are not part of the repository's current production topology. Before deleting an existing service with either name, verify in Google Cloud that no custom domain mapping, traffic tag, or external integration still points to it. Removing either service does not remove the corresponding product route from `alsvid-web`.
 
-Selecting these providers does not mean the live resources already exist. Issue #34 remains open until real account resources are provisioned, the first production release succeeds and backup/restore evidence exists.
+Current Cloud Run deployment has successful release evidence; do not treat historical pre-deployment notes as current. Independently verify actual Neon/R2 bindings and backup/restore acceptance before making a claim about provider readiness.
 
 ## Provider boundaries
 
@@ -59,8 +61,8 @@ Production provider choices must not leak into Domain rules.
 
 - PostgreSQL is the database contract; Neon is the selected managed provider.
 - `@alsvid/ports` is the object-storage contract; the concrete Cloudflare R2 adapter lives in `@alsvid/provider-adapters`.
-- Mail and AI remain provider-neutral until their production providers are selected.
-- Shopify or another external OMS remains external. ALSVID does not own storefront order, payment or fulfillment orchestration.
+- Mail currently uses a provider-neutral interface with Resend delivery; AI integration remains provider-neutral.
+- ALSVID owns its first-party storefront, checkout orchestration and customer orders. An external PSP processes payments; retired Shopify ingestion must not be reintroduced.
 
 ## First-time Google Cloud bootstrap
 
@@ -88,7 +90,7 @@ It intentionally does **not** write secret values. It prints the non-secret GitH
 
 ## Configuration and secrets
 
-Production secret values come from Google Cloud Secret Manager and are read by Cloud Run at deploy/run time. They are not committed, embedded in images or stored as GitHub variables.
+Production secret values come from Google Cloud Secret Manager and are read by Cloud Run at deploy/run time or by an authorized local Production startup operator. They are not committed, embedded in images or stored as GitHub variables.
 
 Required secret names:
 
