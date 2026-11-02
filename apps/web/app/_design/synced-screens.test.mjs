@@ -20,10 +20,10 @@ test('production Admin registry exposes only live module metadata, never Ardot s
 
 test('retired Admin dynamic routes never load demo screen registry', () => {
   const archived = read('../admin/[...designPath]/page.tsx');
-  assert.match(archived, /redirect\\(destination\\)/);
+  assert.ok(archived.includes('redirect(destination)'));
   assert.doesNotMatch(archived, /synced-screens|screenById|AdminScreen|DesignTable/);
-  assert.match(read('../admin/layout.tsx'), /requirePortalSession\\('admin'/);
-  assert.match(read('./index.ts'), /activeScreens as Screen\\[\\]/);
+  assert.ok(read('../admin/layout.tsx').includes("requirePortalSession('admin'"));
+  assert.ok(read('./index.ts').includes('activeScreens as Screen[]'));
   assert.doesNotMatch(read('./renderer.tsx'), /function BlockView|<DesignTable|<DesignForm|<Blocks/);
 });
 
