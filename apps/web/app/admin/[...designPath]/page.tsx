@@ -1,11 +1,27 @@
-import { notFound } from 'next/navigation';
-import AdminScreen from '../../_design/renderer';
-import { screens } from '../../_design';
+import { notFound, redirect } from 'next/navigation';
 
-export default async function DesignPage({ params }: { params: Promise<{ designPath: string[] }> }) {
+// Old Ardot design snapshots are retired. Unknown nested Admin URLs must
+// never load demonstration screens or fake business records. Preserve
+// bookmarked nested links by returning to the actual live parent workspace.
+const liveParents: Readonly<Record<string, string>> = {
+  product: '/admin/product',
+  orders: '/admin/orders',
+  production: '/admin/production',
+  inventory: '/admin/inventory',
+  dealers: '/admin/dealers',
+  customers: '/admin/customers',
+  'after-sales': '/admin/after-sales',
+  supply: '/admin/supply',
+  analytics: '/admin/analytics',
+  settings: '/admin/settings',
+  ecommerce: '/admin/ecommerce',
+  finance: '/admin/finance',
+  logistics: '/admin/logistics',
+};
+
+export default async function ArchivedAdminUrl({ params }: { params: Promise<{ designPath: string[] }> }) {
   const { designPath } = await params;
-  const route = '/admin/' + designPath.join('/');
-  const screen = screens.find(item => item.route === route);
-  if (!screen) notFound();
-  return <AdminScreen screen={screen} />;
+  const destination = designPath.length > 1 ? liveParents[designPath[0] ?? ''] : undefined;
+  if (!destination) notFound();
+  redirect(destination);
 }
