@@ -7,7 +7,7 @@ import styles from './ecommerce-product-workspace.module.css';
 
 type Model = { id: string; product_id: string; code: string; name: string; description: string; status: string; version: number; created_at: string; updated_at: string; platform_id: string | null; product_type_code: string };
 type Variant = { id: string; model_id: string; code: string; name: string; status: string };
-type Sku = { id: string; variant_id: string; sku: string; name: string; status: string; market_code: string | null; color_code: string | null; size_code: string | null };
+type Sku = { id: string; variant_id: string; sku: string; sku_number: string; name: string; status: string; market_code: string | null; color_code: string | null; size_code: string | null };
 type Platform = { id: string; code: string; name: string };
 type Catalog = { models: Model[]; variants: Variant[]; skus: Sku[]; platforms: Platform[] };
 type Publication = { model_id: string; model_code: string; status: string; title_zh: string; title_de: string; title_en: string; image_path: string; version: number; published_at: string | null; withdrawn_at: string | null };
@@ -181,7 +181,7 @@ export function EcommerceProductWorkspace() {
     const created = day(model.created_at);
     return contains(model.product_id, filters.id)
       && contains(model.code, filters.code)
-      && (!filters.sku.trim() || skus.some(sku => contains(sku.sku, filters.sku)))
+      && (!filters.sku.trim() || skus.some(sku => contains(sku.sku_number, filters.sku)))
       && (!filters.name.trim() || [model.name, publication?.title_zh, publication?.title_de, publication?.title_en].some(value => contains(value, filters.name)))
       && (filters.type === 'ALL' || model.product_type_code === filters.type)
       && (filters.market === 'ALL' || prices.some(price => price.marketCountry === filters.market))
@@ -273,17 +273,16 @@ export function EcommerceProductWorkspace() {
     if (!data) return;
     const source = selectedIds.size > 0 ? selectedRows : rows;
     if (!source.length) { setFeedback('当前没有可导出的商品。'); return; }
-    const header = ['商品 ID', '商品编码', '商品名称', '产品类型', 'SKU 数', 'SKU 编码', '市场与售价', '可用库存', '销售状态', '最近更新'];
+    const header = ['商品 ID', '商品名称', '产品类型', 'SKU 数', 'SKU 数字编号', '市场与售价', '可用库存', '销售状态', '最近更新'];
     const body = source.map(row => {
       const { model, publication, skus, prices, stock } = row;
       const available = stockTotal(stock);
       return [
         model.product_id ?? '',
-        model.code,
         publication?.title_zh || model.name,
         productTypeLabel[model.product_type_code] ?? model.product_type_code,
         String(skus.length),
-        skus.map(sku => sku.sku).join(' | '),
+        skus.map(sku => sku.sku_number).join(' | '),
         prices.map(price => `${price.marketCountry} ${price.unitPriceGross} ${price.currency}`).join(' | '),
         available === null ? '数据异常' : String(available),
         publication ? (publicationLabel[publication.status] ?? publication.status) : (publicationLabel.UNLISTED ?? '未建立发布记录'),
@@ -296,11 +295,11 @@ export function EcommerceProductWorkspace() {
 
   async function copySelectedSkus() {
     if (!data || !selectedRows.length) return;
-    const codes = selectedRows.flatMap(row => row.skus.map(sku => sku.sku));
-    if (!codes.length) { setFeedback('所选商品没有可复制的 SKU 编码。'); return; }
+    const codes = selectedRows.flatMap(row => row.skus.map(sku => sku.sku_number));
+    if (!codes.length) { setFeedback('所选商品没有可复制的 SKU 数字编号。'); return; }
     try {
       await navigator.clipboard.writeText(codes.join('\n'));
-      setFeedback(`已复制 ${codes.length} 个 SKU 编码到剪贴板。`);
+      setFeedback(`已复制 ${codes.length} 个 SKU 数字编号到剪贴板。`);
     } catch {
       setFeedback('浏览器拒绝了剪贴板写入，请手动复制。');
     }
@@ -308,7 +307,7 @@ export function EcommerceProductWorkspace() {
 
   async function batchRetire() {
     if (busy || !retireable.length) return;
-    if (!window.confirm(`确认停用 ${retireable.length} 个商品型号？\n\n停用后该型号不再作为可售商品出现在选品与商城流程中；历史订单、库存与生产记录保留。此操作会写入商品主数据版本，请确认已核对商品编码。`)) return;
+    if (!window.confirm(`确认停用 ${retireable.length} 个商品型号？\n\n停用后该型号不再作为可售商品出现在选品与商城流程中；历史订单、库存与生产记录保留。此操作会写入商品主数据版本，请确认已核对数字商品 ID。`)) return;
     setBusy(true); setFeedback(''); setFailures([]);
     const failed: string[] = [];
     let succeeded = 0;
@@ -349,8 +348,8 @@ export function EcommerceProductWorkspace() {
       </nav>
       <form className={styles.filters} onSubmit={applyFilters}>
         <label>数字商品 ID<input className="av-search" inputMode="numeric" pattern="[0-9]{0,6}" maxLength={6} value={draft.id} onChange={event => setDraft({ ...draft, id: event.target.value.replace(/\D/g,'').slice(0,6) })} placeholder="6 位商品 ID" /></label>
-        <label>商品编码<input className="av-search" value={draft.code} onChange={event => setDraft({ ...draft, code: event.target.value })} placeholder="输入商品编码" /></label>
-        <label>SKU 编码<input className="av-search" value={draft.sku} onChange={event => setDraft({ ...draft, sku: event.target.value })} placeholder="输入 SKU 编码" /></label>
+        <label>车型代号<input className="av-search" value={draft.code} onChange={event => setDraft({ ...draft, code: event.target.value })} placeholder="如 FC1" /></label>
+        <label>SKU 数字编号<input className="av-search" inputMode="numeric" value={draft.sku} onChange={event => setDraft({ ...draft, sku: event.target.value })} placeholder="9 位 SKU 编号" /></label>
         <label>商品名称<input className="av-search" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="输入商品名称" /></label>
         <label>创建时间从<input className="av-search" type="date" value={draft.from} onChange={event => setDraft({ ...draft, from: event.target.value })} /></label>
         <label>创建时间至<input className="av-search" type="date" value={draft.to} onChange={event => setDraft({ ...draft, to: event.target.value })} /></label>
@@ -399,11 +398,11 @@ function ProductRow({ row, market, onSelect, chosen, checked, toggle, busy }: { 
     <td><input type="checkbox" aria-label={`选择 ${model.code}`} checked={checked} onChange={() => toggle(model.id)} disabled={busy} /></td>
     <td><div className={styles.product}>
       <div className={styles.image}><span>暂无图片</span>{image ? <img src={image} alt="" onError={event => { event.currentTarget.hidden = true; }} /> : null}</div>
-      <a href={href} onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0) { event.preventDefault(); onSelect(model.id); } }}><strong>{publication?.title_zh || model.name || model.code}</strong><span>商品编码：{model.code}</span><span>数字商品 ID：{model.product_id || '未分配'}</span></a>
+      <a href={href} onClick={event => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0) { event.preventDefault(); onSelect(model.id); } }}><strong>{publication?.title_zh || model.name || model.code}</strong><span>商品 ID：{model.product_id || '未分配'}</span></a>
     </div></td>
     <td>{productTypeLabel[model.product_type_code] ?? model.product_type_code}<span className="av-table-subtext">{platform?.name || platform?.code || '未关联技术平台'}</span></td>
-    <td>{skus.length} 个<span className="av-table-subtext">{skus.slice(0, 2).map(item => item.sku).join('、') || '尚未建立 SKU'}{skus.length > 2 ? ` 等 ${skus.length} 个` : ''}</span></td>
-    <td>{prices.length ? prices.slice(0, 3).map(price => <span className="av-table-subtext" key={price.id}>{price.marketCountry} · {price.sku} · {money(price.unitPriceGross, price.currency)}</span>) : <span className="av-table-subtext">未发现启用价格</span>}{prices.length > 3 ? <span className="av-table-subtext">另有 {prices.length - 3} 条</span> : null}</td>
+    <td>{skus.length} 个<span className="av-table-subtext">{skus.slice(0, 2).map(item => item.sku_number).join('、') || '尚未建立 SKU'}{skus.length > 2 ? ` 等 ${skus.length} 个` : ''}</span></td>
+    <td>{prices.length ? prices.slice(0, 3).map(price => <span className="av-table-subtext" key={price.id}>{price.marketCountry} · {skus.find(item=>item.id===price.skuId)?.sku_number??'SKU未匹配'} · {money(price.unitPriceGross, price.currency)}</span>) : <span className="av-table-subtext">未发现启用价格</span>}{prices.length > 3 ? <span className="av-table-subtext">另有 {prices.length - 3} 条</span> : null}</td>
     <td>{!stock.length ? '无库存记录' : onHand === null ? '数据异常' : onHand.toLocaleString('zh-CN')}<span className="av-table-subtext">{stock.length && available !== null ? `仓库台账未预留：${available.toLocaleString('zh-CN')}` : '—'}</span></td>
     <td>未接入<span className="av-table-subtext">渠道预留尚未核算</span></td>
     <td><span className="av-tag" data-tone={publication?.status === 'PUBLISHED' ? 'good' : publication?.status === 'IN_REVIEW' ? 'warn' : undefined}>{publication ? publicationLabel[publication.status] ?? publication.status : publicationLabel.UNLISTED}</span></td>
