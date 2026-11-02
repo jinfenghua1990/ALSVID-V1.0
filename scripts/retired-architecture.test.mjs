@@ -69,17 +69,24 @@ test('retired Shopify runtime cannot accept or replay orders or create new chann
   const ui = read('apps/web/app/commerce/commerce-client.tsx');
   const env = read('.env.example');
   const integrationPkg = read('domains/integrations/package.json');
-  for (const [name,source] of [['API',api],['integration service',service],['commerce UI',ui]]) {
-    assert.doesNotMatch(source, /\/v1\/integrations\/shopify|@Post\\(['"]shopify|ingestShopify|replayShopify/, name);
+  for (const [name, source] of [['API',api],['integration service',service],['commerce UI',ui]]) {
+    for (const retired of ['integrations/shopify/', 'ingestShopify', 'replayShopify']) {
+      assert.ok(!source.includes(retired), name + ' must not use ' + retired);
+    }
   }
-  assert.ok(!exists('domains/integrations/src/infrastructure/shopify-normalizer.ts'));
-  assert.ok(!exists('domains/integrations/src/infrastructure/sha256-evidence-hasher.ts'));
-  assert.doesNotMatch(factory, /ShopifyNormalizer|CommerceIngestionPort/);
-  assert.match(commerce, /input.provider!=='AMAZON'&&input.provider!=='OTHER'/);
-  assert.doesNotMatch(ui, /<option value="SHOPIFY">|SHOPIFY ADAPTER|onSubmit=\\{ingestShopify\\}|>重放<\/button>/);
-  assert.doesNotMatch(env, /SHOPIFY_SHOP_DOMAIN|SHOPIFY_ACCESS_TOKEN|ALSVID_SHOPIFY_FC1_PRODUCT_URL/);
-  assert.doesNotMatch(integrationPkg, /@alsvid\\/commerce/);
-  // Deployed historical data and audit evidence are retained, not destroyed.
+  assert.equal(exists('domains/integrations/src/infrastructure/shopify-normalizer.ts'), false);
+  assert.equal(exists('domains/integrations/src/infrastructure/sha256-evidence-hasher.ts'), false);
+  assert.ok(!factory.includes('ShopifyNormalizer'));
+  assert.ok(!factory.includes('CommerceIngestionPort'));
+  assert.ok(commerce.includes("input.provider!=='AMAZON'&&input.provider!=='OTHER'"));
+  for (const retired of ['<option value="SHOPIFY">', 'SHOPIFY ADAPTER', 'onSubmit={ingestShopify}', '>重放</button>']) {
+    assert.ok(!ui.includes(retired), 'retired UI: ' + retired);
+  }
+  for (const retired of ['SHOPIFY_SHOP_DOMAIN', 'SHOPIFY_ACCESS_TOKEN', 'ALSVID_SHOPIFY_FC1_PRODUCT_URL']) {
+    assert.ok(!env.includes(retired), 'retired env: ' + retired);
+  }
+  assert.ok(!integrationPkg.includes('@alsvid/commerce'));
+  // Historic evidence and schema are retained, not dropped.
   assert.ok(exists('packages/database/migrations/0015_shopify_delivery_metadata.sql'));
-  assert.match(read('domains/integrations/src/infrastructure/postgres-integration-repository.ts'), /SELECT r\\.\\*,c\\.provider/);
+  assert.ok(read('domains/integrations/src/infrastructure/postgres-integration-repository.ts').includes('SELECT r.*,c.provider'));
 });
