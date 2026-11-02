@@ -200,7 +200,7 @@ export class FinanceService {
     if(!categories.includes(input?.category))throw new FinanceValidationError('Invalid landed cost category');
     const amount=Number(input?.amount);
     if(!Number.isFinite(amount)||amount<0||amount>1000000000||Math.abs(amount*100-Math.round(amount*100))>0.00001)throw new FinanceValidationError('Cost amount must be nonnegative with at most two decimals');
-    try{return await this.repository.distributeLandedCost(id,{category:input.category,amountCents:Math.round(amount*100),note:input.note,actorUserId:actor.userId})}
+    try{return await this.repository.distributeLandedCost(id,{category:input.category,amountCents:Math.round(amount*100),...(input.note!==undefined?{note:input.note}:{}),actorUserId:actor.userId})}
     catch(error){this.rethrow(error)}
   }
 
