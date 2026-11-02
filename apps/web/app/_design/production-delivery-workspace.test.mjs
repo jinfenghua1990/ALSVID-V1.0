@@ -28,3 +28,8 @@ test('delivery migration adds domestic route without losing inventory or customs
   assert.match(sql,/Shipment cargo SKU does not match a purchased SKU/);
   assert.match(repo,/sourcePurchaseOrderId/);
 });
+
+test('factory and warehouse receipts and multi-SKU finance are real editable stages',()=>{
+ const ui=read('./production-delivery-workspace.tsx');
+ for(const path of ['factory-receipts','receive-warehouse','landed-cost/','landedAllocations','工厂成品入库','本次实收入库','成本分摊'])assert.ok(ui.includes(path),path);
+});
