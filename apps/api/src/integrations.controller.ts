@@ -7,10 +7,6 @@ import { integrationService } from './runtime.js';
 export class IntegrationsController{
   @Get()
   async summary(@Req() request:AuthenticatedRequest){return{data:await integrationService.summary(requireAuth(request))};}
-  @Post('shopify/:channelId/ingest')
-  async ingestShopify(@Req() request:AuthenticatedRequest,@Param('channelId') channelId:string,@Body() input:any){return{data:await integrationService.ingestShopify(requireAuth(request),channelId,input)};}
-  @Post('shopify/receipts/:id/replay')
-  async replayShopify(@Req() request:AuthenticatedRequest,@Param('id') id:string){return{data:await integrationService.replayShopify(requireAuth(request),id)};}
   @Post('channels/:channelId/cursors')
   async cursor(@Req() request:AuthenticatedRequest,@Param('channelId') channelId:string,@Body() input:any){return{data:await integrationService.setCursor(requireAuth(request),channelId,input)};}
 
