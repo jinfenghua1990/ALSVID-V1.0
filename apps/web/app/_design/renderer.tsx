@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import './design-system.css';
 import type { Screen } from './types';
 import { screens } from './index';
-import { AdminLogout } from './live-operations';
+import { AdminLogout } from './admin-logout';
 import { AdminGlobalSearch } from './admin-global-search';
 import { IntegratedOperations, hasIntegratedOperations } from './integrated-operations';
 import { VehicleRecordDetail } from './vehicle-record-detail';
