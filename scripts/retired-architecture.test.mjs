@@ -103,3 +103,26 @@ test('retired Shopify runtime cannot accept or replay orders or create new chann
   assert.ok(exists('packages/database/migrations/0015_shopify_delivery_metadata.sql'));
   assert.ok(read('domains/integrations/src/infrastructure/postgres-integration-repository.ts').includes('SELECT r.*,c.provider'));
 });
+
+
+
+test('local gateway forwards every Next.js BFF API route to Web and preserves NestJS API', () => {
+  const gateway = read('infra/gateway/nginx.conf');
+  const routeDirectories = readdirSync(join(root, 'apps/web/app/api'), { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && !entry.name.startsWith('_'))
+    .map(entry => entry.name);
+  assert.deepEqual(routeDirectories.sort(), ['admin', 'control', 'partners', 'public', 'session', 'settings']);
+  for (const prefix of routeDirectories) {
+    const block = gateway.split('location ^~ /api/' + prefix + '/ {')[1]?.split('\n  }')[0];
+    assert.ok(block, 'Missing Next.js gateway route for /api/' + prefix + '/');
+    assert.ok(block.includes('proxy_pass $web_upstream;'), 'Wrong target for Next.js /api/' + prefix + '/');
+  }
+  assert.ok(gateway.includes('location /api/ {\n    proxy_pass $api_upstream;'),
+    'NestJS /api/v1/* must still use the API upstream');
+});
+
+test('local Production refuses untracked source files that Docker would otherwise package', () => {
+  const localScript = read('scripts/local-production.mjs');
+  assert.ok(localScript.includes("'--untracked-files=normal'"), 'Production Docker build must reject unexpected untracked source files');
+  assert.ok(!localScript.includes("'--untracked-files=no'"), 'Untracked source files must not bypass the clean checkout gate');
+});
