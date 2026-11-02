@@ -12,7 +12,7 @@
     "area": "产品",
     "route": "/admin/product",
     "title": "产品中心",
-    "subtitle": "平台 · 型号 · 配置与工程资料 ｜ 示例数据",
+    "subtitle": "平台、车型、规格、SKU 与工程资料",
     "sourceNode": "module:product",
     "blocks": []
   },
@@ -48,7 +48,7 @@
     "area": "经销商",
     "route": "/admin/dealers",
     "title": "经销商中心",
-    "subtitle": "全球经销商网络运营 · 采购 / 库存 / 售后能力一览 ｜ 示例数据",
+    "subtitle": "经销商档案、授权与业务协作",
     "sourceNode": "module:dealers",
     "blocks": []
   },
@@ -57,7 +57,7 @@
     "area": "客户",
     "route": "/admin/customers",
     "title": "客户/车主中心",
-    "subtitle": "车主资产生命周期管理 · 从客户到车辆到服务 ｜ 示例数据",
+    "subtitle": "客户、车主及车辆归属关系",
     "sourceNode": "module:customers",
     "blocks": []
   },
@@ -66,7 +66,7 @@
     "area": "售后",
     "route": "/admin/after-sales",
     "title": "售后中心",
-    "subtitle": "车辆生命周期服务 · VIN · 保修 · 维修 · 配件 ｜ 示例数据",
+    "subtitle": "工单、保修、维修与配件协作",
     "sourceNode": "module:after-sales",
     "blocks": []
   },
@@ -75,7 +75,7 @@
     "area": "供应链",
     "route": "/admin/supply",
     "title": "供应链中心",
-    "subtitle": "供应商生态 · 采购履约 · 零件供应全链路 ｜ 示例数据",
+    "subtitle": "供应商档案、采购订单与入库协作",
     "sourceNode": "module:supply",
     "blocks": []
   },
@@ -84,7 +84,7 @@
     "area": "数据",
     "route": "/admin/analytics",
     "title": "数据总览",
-    "subtitle": "销售 · 生产 · 库存 · 渠道 · 服务全景 ｜ 示例数据，待接入业务系统",
+    "subtitle": "经营指标与可信数据源；未接入指标显示空状态",
     "sourceNode": "module:analytics",
     "blocks": []
   },
@@ -93,7 +93,7 @@
     "area": "设置",
     "route": "/admin/settings",
     "title": "角色与权限",
-    "subtitle": "组织 · 用户 · 角色 · 数据范围 ｜ 示例权限，待接入身份系统",
+    "subtitle": "用户、角色、权限与审计记录",
     "sourceNode": "module:settings",
     "blocks": []
   },
@@ -102,7 +102,7 @@
     "area": "生产",
     "route": "/admin/production/vin",
     "title": "VIN 管理",
-    "subtitle": "每台车的数字身份证 · 生产到售后追溯 ｜ 示例档案",
+    "subtitle": "VIN 查询与车辆生产、交付、服务追溯",
     "sourceNode": "module:vehicle",
     "blocks": []
   },
@@ -110,8 +110,8 @@
     "id": "vin-detail",
     "area": "生产",
     "route": "/admin/production/vin-detail",
-    "title": "VIN 详情 · ALS00001",
-    "subtitle": "车辆数字档案 · 生产 → 销售 → 车主 → 服务全生命周期",
+    "title": "VIN / 车辆档案",
+    "subtitle": "按真实 VIN 查询车辆及其生命周期记录",
     "sourceNode": "module:vehicle",
     "blocks": []
   }
