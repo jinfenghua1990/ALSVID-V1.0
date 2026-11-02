@@ -62,14 +62,12 @@ export const ADMIN_SECONDARY_NAVIGATION: Readonly<Record<string, readonly AdminS
     ]),
   ],
   '库存': [
-    group('库存查询', [
-      ['库存总览', '/admin/inventory'],
-      ['仓库列表', '/admin/inventory#warehouses'],
-      ['库存余额', '/admin/inventory#balances'],
+    group('仓库管理', [
+      ['仓库设置', '/admin/inventory/warehouses'],
+      ['仓库库存', '/admin/inventory/stock'],
     ]),
-    group('仓库操作', [
-      ['仓库与库位维护', '/admin/inventory#warehouse-setup'],
-      ['库存流水', '/admin/inventory#movement-history'],
+    group('库存作业', [
+      ['出入库 / 调拨', '/admin/inventory#movement-history'],
       ['库存盘点', '/admin/inventory#stocktake'],
     ]),
   ],

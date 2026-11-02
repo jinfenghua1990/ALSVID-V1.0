@@ -45,6 +45,18 @@ export class WarehouseService {
     } catch (error) { this.rethrow(error); }
   }
 
+  async updateWarehouse(actor: WarehouseActor, id: string, input: { name: string; timezone: string; expectedName: string; expectedTimezone: string }): Promise<any> {
+    requireCapability(actor, WarehouseCapability.Manage);
+    const name = input?.name?.trim();
+    const timezone = input?.timezone?.trim();
+    if (!id || !name || !timezone || !input?.expectedName || !input?.expectedTimezone || name.length > 120 || timezone.length > 100)
+      throw new WarehouseValidationError('Warehouse name, timezone, and original values are required');
+    const row = await this.repository.updateWarehouse({id,name,timezone,expectedName:input.expectedName,expectedTimezone:input.expectedTimezone,actorUserId:actor.userId});
+    if (!row) throw new WarehouseConflictError('Warehouse was changed or no longer exists; reload before editing');
+    await this.audit.record({actorUserId:actor.userId,action:'warehouse.updated',targetType:'warehouse',targetId:id});
+    return row;
+  }
+
   async createLocation(actor: WarehouseActor, input: { warehouseId: string; parentLocationId?: string; code: string; name: string; locationType: string }): Promise<any> {
     requireCapability(actor, WarehouseCapability.Manage);
     if (!input.warehouseId || !input.name?.trim()) throw new WarehouseValidationError('warehouseId and name are required');

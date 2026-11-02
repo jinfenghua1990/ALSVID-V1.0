@@ -74,7 +74,8 @@ test('product, inventory, production and procurement deep links retain their rea
     ['生产订单', '/admin/production#work-orders'],
     ['BOM / 生产用料清单', '/admin/production#production-bom'],
     ['采购订单', '/admin/supply#purchasing'],
-    ['仓库列表', '/admin/inventory#warehouses'],
+    ['仓库设置', '/admin/inventory/warehouses'],
+    ['仓库库存', '/admin/inventory/stock'],
     ['VIN查询', '/admin/production/vin-detail'],
   ]) assert.ok(links.some(item => item.label === label && item.href === href), label);
   for (const [file, anchors] of [
@@ -85,6 +86,17 @@ test('product, inventory, production and procurement deep links retain their rea
     const content = readFileSync(join(here, '..', file), 'utf8');
     for (const anchor of anchors) assert.ok(content.includes('id="' + anchor + '"'), file + ':' + anchor);
   }
+});
+
+test('warehouse management uses two distinct routes backed by the existing warehouse and inventory APIs', () => {
+  assert.equal(existsSync(join(here, '..', 'admin/inventory/warehouses/page.tsx')), true);
+  assert.equal(existsSync(join(here, '..', 'admin/inventory/stock/page.tsx')), true);
+  const client = readFileSync(join(here, '..', 'inventory/warehouse-management-client.tsx'), 'utf8');
+  assert.match(client, /\/v1\/warehouse/);
+  assert.match(client, /\/v1\/inventory/);
+  assert.match(client, /新建仓库/);
+  assert.match(client, /按仓库\/SKU/);
+  assert.doesNotMatch(client, /mockWarehouse|sampleInventory/);
 });
 
 test('live and legacy shells no longer import or resurrect the old navigation', () => {
