@@ -28,7 +28,7 @@
 | 车主中心 | [knowledge/03-Systems/My-ALSVID.md](../knowledge/03-Systems/My-ALSVID.md) |
 | 后续供应商自助 | [knowledge/03-Systems/Supplier-Portal.md](../knowledge/03-Systems/Supplier-Portal.md) |
 | 产品、平台、SKU、BOM | [knowledge/02-Products](../knowledge/02-Products/) 与 [产品架构](PRODUCT_ARCHITECTURE.md) |
-| 独立商城方案对比（Medusa/CRMEB）上线范围与待办 | [交付与验收记录](COMMERCE_SOURCE_DELIVERY_SCOPE_2026-10-26.md)；[PostgreSQL 适配 ADR](adr/2026-10-26-commerce-comparison-postgresql.md) |
+| 历史 Medusa/CRMEB 对比试验（已退役原生框架） | [历史交付记录](COMMERCE_SOURCE_DELIVERY_SCOPE_2026-10-26.md)；**现行商城**遵循 [Admin IA](ALSVID_ADMIN_IA.md) 与 [发布流程](RELEASE_FLOW.md)，不得恢复独立 PHP/MySQL/Vue 运行栈 |
 | 当前实施及验收证据 | [CURRENT_STATE.md](CURRENT_STATE.md)、关联 Issue/PR/具体提交 |
 | 多 AI / 多电脑交接 | [COLLABORATION.md](COLLABORATION.md) |
 | 部署流程 | [RELEASE_FLOW.md](RELEASE_FLOW.md) |

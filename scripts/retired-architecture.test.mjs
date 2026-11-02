@@ -18,6 +18,7 @@ test('retired parallel frameworks cannot be reintroduced into ALSVID production'
     'apps/web/public/commerce-lab-native.stale-20261029',
     'external/crmeb/crmeb',
     'external/crmeb/template',
+    'docs/COMMERCE_SOURCE_LOCK.json',
     'apps/web/app/_design/screens-a.ts',
     'apps/web/app/_design/screens-b.ts',
     'apps/web/app/_design/screens-c.ts',
@@ -50,4 +51,12 @@ test('one guarded Admin shell and production release target remain authoritative
   assert.ok(exists('infra/docker-compose.test.yml'), 'ephemeral CI fixtures remain supported');
   assert.ok(exists('infra/docker-compose.local-production.yml'), 'shared Neon/R2 local runtime remains supported');
   assert.ok(exists('apps/web/app/api/control/[...path]/route.ts'), 'shared authenticated API proxy remains');
+});
+
+test('retired subdomain cookie scopes and old framework source locks are forbidden', () => {
+  const source = read('apps/web/app/_lib/session-cookie.ts');
+  assert.ok(!source.includes('.chaibenn.com'), 'legacy ChaiBen cookies must not return');
+  assert.ok(!source.includes('.alsvid.com'), 'legacy ALSVID alias cookies must not return');
+  assert.ok(source.includes("host.endsWith('.alsvidbike.com')"));
+  assert.equal(exists('docs/COMMERCE_SOURCE_LOCK.json'), false);
 });

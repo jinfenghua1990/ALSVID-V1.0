@@ -33,17 +33,12 @@ export function sessionCookieOptions(request: Request, expiresAt?: Date): {
 } {
   const host = ((request.headers.get('host') ?? '').split(':')[0] ?? '').toLowerCase();
   const portal = host.split('.')[0] ?? '';
-  const domain = INTERNAL_PORTALS.has(portal) && host.endsWith('.dev.chaibenn.com')
-    ? '.dev.chaibenn.com'
-    : INTERNAL_PORTALS.has(portal) && host.endsWith('.chaibenn.com')
-      ? '.chaibenn.com'
-      : INTERNAL_PORTALS.has(portal) && host.endsWith('.alsvidbike.com')
-        ? '.alsvidbike.com'
-        : INTERNAL_PORTALS.has(portal) && host.endsWith('.dev.alsvid.com')
-          ? '.dev.alsvid.com'
-          : INTERNAL_PORTALS.has(portal) && host.endsWith('.alsvid.com')
-            ? '.alsvid.com'
-            : undefined;
+  // Only the verified ALSVID domain may share an internal-portal cookie.
+  // Retired ChaiBen / ALSVID alias hosts must never receive cross-subdomain
+  // session cookie scopes. Local, preview and run.app hosts use host-only cookies.
+  const domain = INTERNAL_PORTALS.has(portal) && host.endsWith('.alsvidbike.com')
+    ? '.alsvidbike.com'
+    : undefined;
 
   return {
     httpOnly: true,

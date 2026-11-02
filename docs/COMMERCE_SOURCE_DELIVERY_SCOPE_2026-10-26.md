@@ -1,5 +1,7 @@
 # 商城源码导入与发布范围（2026-10-26）
 
+> **历史验收归档（已被 2026-11-02 PR #453 取代）**：以下 10 月 26 日对比试验的部署与源码导入描述不代表当前运行架构；被撤销的 CRMEB PHP/MySQL、Vue/Element UI 原生运行链路不得重新启用。商城预览中仍被业务引用的 Node/Next.js 代码由统一 API 和 Neon/R2 支持，切勿把历史独立部署视作当前能力。
+
 status: PR #375 deployed as `5cff0a37eb0911add744e4fb368056c3a2bb79e9`; production signed-in catalog operations and live R2 acceptance pending
 
 ## 负责人确认与现有资源
@@ -10,7 +12,7 @@ status: PR #375 deployed as `5cff0a37eb0911add744e4fb368056c3a2bb79e9`; producti
 负责人在 PR #375 完成代码、测试、截图审查后明确指示“**不用，直接部署**”。该确认适用于 PR #375；此前因缺少明确上线确认而产生的发布审批阻断已解除，不应继续把此版本记为等待批准或草稿。
 
 ## 已导入与已适配范围
-- `external/medusa-dtc` 为固定版本官方 DTC 前台源码与许可证；商品卡适配在现有 Web 内并使用共享三语词库。CRMEB 原生 Vue 2/Element UI/PHP/MySQL 对比运行代码及静态快照在 2026-11-02 第二轮清理中移除；仅保留历史许可文本和决策记录。当前 Node/Next.js 商品编辑与统一 API 是唯一正式实现。`docs/COMMERCE_SOURCE_LOCK.json` 记录原始导入快照。
+- `external/medusa-dtc` 为固定版本官方 DTC 前台源码与许可证；商品卡适配在现有 Web 内并使用共享三语词库。CRMEB 原生 Vue 2/Element UI/PHP/MySQL 对比运行代码及静态快照在 2026-11-02 第二轮清理中移除；仅保留历史许可文本和决策记录。当前 Node/Next.js 商品编辑与统一 API 是唯一正式实现。原始源码导入锁已移除，历史内容可通过 Git 提交记录追溯。
 - PHP/MySQL 原生容器仅用于隔离参考验收，不是本次生产商品功能的运行依赖。
 - WWW `/{zh,de,en}/shop-preview` 展示已发布实验商品，支持详情与独立预览袋；固定交互样例保留在 `/shop-preview/reference`。
 - Admin `/admin/commerce-lab/catalog` 管理三语名称/说明、参考图、方案价与发布状态。`/admin/commerce-lab/catalog/{id}/preview` 支持已保存商品的三语只读预览；草稿与归档商品不向官网公开。
@@ -38,6 +40,6 @@ status: PR #375 deployed as `5cff0a37eb0911add744e4fb368056c3a2bb79e9`; producti
 | 生产 R2 | 适配代码与现有配置已部署；临时媒体测试通过 | 用正式账号验收真实上传、草稿读取、公开读取与撤回；不新增存储服务 |
 | 商品资料 | 本次观测无已发布商品 | 使用经确认的车型、三语资料与方案价；负责人允许当前阶段用占位图 |
 | 正式交易 | 本区仍为比较目录与预览袋 | SKU、正式售价、可售库存、税费运费、真实订单、支付、履约和退款尚未完成本区融合 |
-| CRMEB 其他模块 | 已导入源码，未全量适配 | 会员、优惠券、营销等逐项选择与验收，源码存在不能算已交付 |
+| CRMEB 其他模块 | 原生源码已退役，不再作为现行运行模块 | 会员、优惠券、营销等逐项选择与验收，源码存在不能算已交付 |
 
 初次独立目录发布见 [PR #372](https://github.com/jinfenghua1990/ALSVID/pull/372) 与 [初次生产发布](https://github.com/jinfenghua1990/ALSVID/actions/runs/40286738086)。这些是历史记录，当前应用部署版本以上述 PR #375 的 SHA 和实际核验为准。

@@ -30,3 +30,25 @@ test('internal portal session cookies use the canonical parent domain',()=>{
  const owner=sessionCookieOptions(new Request('https://my.alsvidbike.com/',{headers:{host:'my.alsvidbike.com'}}));
  assert.equal(owner.domain,undefined);
 });
+
+test('retired host aliases never create cross-subdomain login cookies', () => {
+  for (const host of [
+    'admin.chaibenn.com',
+    'dealer.dev.chaibenn.com',
+    'admin.alsvid.com',
+    'service.dev.alsvid.com',
+    'alsvid-web-51910044792.europe-west1.run.app',
+    'localhost:3000',
+  ]) {
+    const settings = sessionCookieOptions(
+      new Request('https://example.invalid/', { headers: { host } }),
+    );
+    assert.equal(settings.domain, undefined, `Retired host must stay host-only: ${host}`);
+  }
+  for (const host of ['admin.alsvidbike.com', 'dealer.alsvidbike.com', 'supplier.alsvidbike.com', 'service.alsvidbike.com']) {
+    const settings = sessionCookieOptions(
+      new Request('https://example.invalid/', { headers: { host } }),
+    );
+    assert.equal(settings.domain, '.alsvidbike.com', host);
+  }
+});
