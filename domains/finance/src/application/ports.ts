@@ -112,4 +112,5 @@ export interface FinanceRepository {
   addLandedCostComponent(batchId: string, input: NormalizedLandedCostComponentInput): Promise<any>;
   allocateLandedCost(componentId: string, input: NormalizedLandedAllocationInput): Promise<any>;
   finalizeLandedCostBatch(batchId: string, actorUserId: string): Promise<any | null>;
+  distributeLandedCost(batchId:string,input:{category:string;amountCents:number;note?:string;actorUserId:string}):Promise<any>;
 }

@@ -99,6 +99,11 @@ export class FinanceController {
     return { data: await financeService.allocateLandedCost(requireAuth(request), id, input) };
   }
 
+  @Post('landed-cost/:id/distribute')
+  async distributeShipmentCost(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() input: {category:string;amount:number;note?:string}) {
+    return {data:await financeService.distributeLandedCost(requireAuth(request),id,input)};
+  }
+
   @Post('landed-cost/:id/finalize')
   async finalizeLandedCostBatch(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
     return { data: await financeService.finalizeLandedCostBatch(requireAuth(request), id) };
