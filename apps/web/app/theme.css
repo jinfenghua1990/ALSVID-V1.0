@@ -446,3 +446,195 @@ html[data-theme="dark"] .mobileNav {
     padding: 0 8px;
   }
 }
+
+/* Active utility-page compatibility selectors consolidated from the retired duplicate stylesheet. */
+/* Generic surfaces used by legacy and utility pages. This file keeps them on the same V2 light/dark design system. */
+.partnerWorkspace,
+.workspace {
+  background: var(--alsvid-bg);
+  color: var(--alsvid-text);
+}
+
+.pageHeader,
+.partnerHeader,
+.topbar {
+  color: var(--alsvid-text);
+}
+
+.pageHeader h1,
+.sectionTitle,
+.partnerHeader h1,
+.topbar h1 {
+  color: var(--alsvid-text);
+  letter-spacing: -.045em;
+}
+
+.pageIntro,
+.sectionLead,
+.partnerHeader p,
+.topbar p {
+  color: var(--alsvid-muted);
+}
+
+.status,
+.statusPill,
+.tableCard,
+.detailCard,
+.infoCard,
+.authCard,
+.modalCard,
+.metricRow,
+.card {
+  border-color: var(--alsvid-line);
+  background: var(--alsvid-panel);
+  color: var(--alsvid-text);
+  box-shadow: none;
+}
+
+.metricRow {
+  overflow: hidden;
+}
+
+.metric {
+  border-color: var(--alsvid-line);
+}
+
+.metric span,
+.tableHead,
+.tableRow small,
+.emptyState,
+.infoRow > span:first-child,
+.infoCard p,
+.providerRow small,
+.factBlock > span,
+.factBlock small,
+.cardTop,
+.card p,
+.cardFoot,
+.eyebrow {
+  color: var(--alsvid-muted);
+}
+
+.tableHead {
+  border-color: var(--alsvid-line);
+  background: var(--alsvid-panel-2);
+}
+
+.tableRow {
+  border-color: var(--alsvid-line);
+  background: var(--alsvid-panel);
+  color: var(--alsvid-text);
+}
+
+.tableRow:hover {
+  background: var(--alsvid-panel-2);
+}
+
+.detailCard {
+  box-shadow: var(--alsvid-shadow);
+}
+
+.roleList i,
+.statusPill,
+.toolbar button {
+  border-color: var(--alsvid-line);
+  background: var(--alsvid-bg-soft);
+  color: var(--alsvid-text-2);
+}
+
+fieldset,
+.infoRows,
+.infoRow,
+.factBlock,
+.providerRow {
+  border-color: var(--alsvid-line);
+}
+
+.checkGrid label,
+.infoRow strong,
+.providerRow strong,
+.factBlock p,
+.card h2 {
+  color: var(--alsvid-text);
+}
+
+input,
+select,
+textarea {
+  border-color: var(--alsvid-line);
+  background: var(--alsvid-input);
+  color: var(--alsvid-text);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--alsvid-accent);
+  box-shadow: 0 0 0 3px var(--alsvid-accent-soft);
+}
+
+.primaryButton {
+  background: var(--alsvid-accent);
+  color: #fff;
+}
+
+.toolbar button:hover {
+  border-color: var(--alsvid-line-strong);
+  background: var(--alsvid-panel-2);
+}
+
+.notice {
+  border-color: color-mix(in srgb, var(--alsvid-warning) 34%, var(--alsvid-line));
+  background: color-mix(in srgb, var(--alsvid-warning) 10%, var(--alsvid-panel));
+  color: var(--alsvid-text-2);
+}
+
+.mutedBox {
+  border-color: var(--alsvid-line-strong);
+  background: var(--alsvid-panel-2);
+  color: var(--alsvid-muted);
+}
+
+.authPage {
+  background:
+    radial-gradient(circle at 18% 8%, var(--alsvid-panel) 0, transparent 35%),
+    var(--alsvid-bg);
+}
+
+.modalBackdrop {
+  background: rgba(3, 7, 12, .52);
+}
+
+.modalHead > button {
+  color: var(--alsvid-text-2);
+}
+
+.mobileNav {
+  border-color: var(--alsvid-line);
+  background: var(--alsvid-header);
+}
+
+html[data-theme="dark"] .hero p {
+  color: var(--alsvid-text-2);
+}
+
+html[data-theme="dark"] .rail:not(.shellV2 .rail) {
+  border-color: var(--alsvid-line);
+  background: var(--alsvid-rail);
+}
+
+html[data-theme="dark"] .rail:not(.shellV2 .rail) .brand {
+  color: var(--alsvid-text);
+}
+
+html[data-theme="dark"] .rail:not(.shellV2 .rail) .navItem.active,
+html[data-theme="dark"] .rail:not(.shellV2 .rail) nav a:hover {
+  background: var(--alsvid-accent-soft);
+  color: var(--alsvid-accent);
+}
+
+@media (max-width: 850px) {
+  .mobileNav {
+    background: var(--alsvid-header) !important;
+  }
+}
