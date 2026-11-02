@@ -67,8 +67,14 @@ try {
   assert.equal(await archive.locator('#model-register tbody tr').count(), 1, 'one bicycle occupies one data row');
   assert.equal(await archive.locator('.unused-kpi-placeholder').count(), 0);
   assert.equal(await archive.locator('#product-info-panel').count(), 0, 'no duplicated product-category accordion');
-  const maintenancePanel = archive.locator('#product-maintenance-panel');
-  assert.equal(await maintenancePanel.evaluate(node => node.open), false, 'variant and SKU forms start collapsed');
+  assert.equal(await archive.locator('#product-maintenance-panel').count(), 0, 'legacy variant/SKU accordion is deleted');
+  await archive.getByRole('row', { name: /FC1/ }).getByRole('button', { name: '编辑 FC1 配置版本与 SKU' }).click();
+  const configurationDialog = archive.getByRole('dialog', { name: '编辑车型配置及 SKU' });
+  await configurationDialog.waitFor();
+  assert.equal(await configurationDialog.getByRole('heading', { name: '新增商业版本' }).count(), 1);
+  assert.equal(await configurationDialog.getByRole('heading', { name: '新增 SKU 规格' }).count(), 1);
+  await configurationDialog.getByRole('button', { name: '关闭' }).click();
+  assert.equal(await archive.getByRole('dialog').count(), 0, 'closing version/SKU editor returns to compact table');
   await page.screenshot({ path: path.join(output, 'admin-product-archive-desktop.png'), fullPage: true });
   await archive.getByRole('button', { name: '＋ 新建整车' }).first().click();
   const createBicycle = archive.getByRole('dialog', { name: '新建整车' });

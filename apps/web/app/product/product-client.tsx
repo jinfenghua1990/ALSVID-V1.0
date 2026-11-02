@@ -166,6 +166,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [newModelType, setNewModelType] = useState('BIKE');
   const [edit, setEdit] = useState<EditTarget | null>(null);
+  const [manageModelId, setManageModelId] = useState<string | null>(null);
   const [platformDraft, setPlatformDraft] = useState<Platform | 'new' | null>(null);
   const [platformStatusFilter, setPlatformStatusFilter] = useState('ALL');
   const [savingPlatform, setSavingPlatform] = useState(false);
@@ -283,6 +284,11 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
       platform: catalog.platforms.find((item) => item.id === model.platform_id),
       variants: catalog.variants.filter((item) => item.model_id === model.id),
     })), [catalog]);
+
+  const manageModel = manageModelId ? catalog.models.find(item => item.id === manageModelId) : null;
+  const manageVariants = manageModel ? catalog.variants.filter(item => item.model_id === manageModel.id) : [];
+  const manageVariantIds = new Set(manageVariants.map(item => item.id));
+  const manageSkus = catalog.skus.filter(item => manageVariantIds.has(item.variant_id));
 
   const duplicateSkuDimensions = useMemo(() => findActiveSkuCombinationDuplicates(catalog.skus), [catalog.skus]);
   const filteredModels = useMemo(() => hierarchyRows.filter(({ model, platform }) =>
@@ -623,7 +629,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                         <td>{modelSpecSummary(model, 'basic', 'markets') || '未填写'}</td>
                         <td>{variants.length ? `${variants.length} 个配置` : '未配置'}</td>
                         <td><span className={styles.archiveStatus} data-status={model.status}>{statusLabel(model.status)}</span></td>
-                        <td><div className={styles.tableActionGroup}><button type="button" className={styles.archiveEdit} onClick={() => openTechnicalSpecs(model)}>技术参数</button><button type="button" className={styles.archiveEdit} onClick={() => setEdit({ entity: 'model', id: model.id, version: model.version, name: model.name, status: model.status, description: model.description, productTypeCode: model.product_type_code, customFields: modelCustomFields(model.custom_fields) })}>编辑</button></div></td>
+                        <td><div className={styles.tableActionGroup}><button type="button" className={styles.archiveEdit} onClick={() => openTechnicalSpecs(model)}>技术参数</button><button type="button" className={styles.archiveEdit} onClick={() => setEdit({ entity: 'model', id: model.id, version: model.version, name: model.name, status: model.status, description: model.description, productTypeCode: model.product_type_code, customFields: modelCustomFields(model.custom_fields) })}>编辑</button><button type="button" className={styles.archiveEdit} aria-label={`编辑 ${model.code} 配置版本与 SKU`} onClick={() => {setMessage('');setManageModelId(model.id);}}>版本 / SKU</button></div></td>
                       </tr>
                     ))}</tbody>
                   </table>
@@ -695,70 +701,6 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
           </section>
         ) : null}
 
-        {workspace === 'bikes' ? (
-          <details className={styles.workspaceAdvanced} id="product-maintenance-panel">
-            <summary>配置版本与 SKU 管理 <span>需要维护规格时展开 <span aria-hidden="true">⌄</span></span></summary>
-                  <section className={styles.section} id="models">
-        <div className={styles.sectionHead}>
-          <div><span>PRODUCT STRUCTURE</span><h2>配置版本与 SKU 明细</h2></div>
-          <p>仅在需要管理版本和规格时展开；整车主档案仍保持一条记录一行。</p>
-        </div>
-        <div className={styles.hierarchy}>
-          {hierarchyRows.filter(({ model }) => model.product_type_code === 'BIKE').map(({ model, platform, variants }) => (
-            <div className={styles.modelBlock} key={model.id}>
-              <div className={styles.modelLine}>
-                <div><small>{catalog.productTypes.find(t=>t.code===model.product_type_code)?.name ?? (model.product_type_code ?? '待升级')} · {platform?.code ?? '不适用技术平台'}</small><b>{modelShortName(model)}</b><span>{model.name}</span><small>商品 ID：{model.product_id}</small><small>Model ID：{model.id}</small><small>{statusLabel(model.status)}</small></div>
-                <button onClick={() => setEdit({ entity: 'model', id: model.id, version: model.version, name: model.name, status: model.status, description: model.description, productTypeCode: model.product_type_code, customFields: modelCustomFields(model.custom_fields) })}>编辑</button>
-              </div>
-              {variants.map((variant) => (
-                <div className={styles.variantBlock} key={variant.id}>
-                  <div className={styles.variantLine}>
-                    <div><b>{variant.code}</b><span>{variant.name}</span><small>{statusLabel(variant.status)}</small></div>
-                    <button onClick={() => setEdit({ entity: 'variant', id: variant.id, version: variant.version, name: variant.name, status: variant.status, description: variant.description })}>编辑</button>
-                  </div>
-                  <div className={styles.skuList}>
-                    {catalog.skus.filter((sku) => sku.variant_id === variant.id).map((sku) => (
-                      <div className={styles.sku} key={sku.id}>
-                        <div>
-                          <b>{sku.sku}</b>
-                          <span>{sku.name}</span>
-                          <small>SKU ID {sku.sku_number} · SKU 编码 · {[sku.market_code, sku.color_code, sku.size_code].filter(Boolean).join(' · ') || '基础配置'} · {statusLabel(sku.status)}</small>
-                        </div>
-                        <div className={styles.skuActions}>
-                          <a href={adminSkuPricingHref(sku)} className={styles.skuPriceLink} aria-label={`为 ${sku.sku} 配置商城价格`}>管理售价</a>
-                          <button onClick={() => setEdit({ entity: 'sku', id: sku.id, version: sku.version, name: sku.name, status: sku.status, marketCode: sku.market_code, colorCode: sku.color_code, sizeCode: sku.size_code })}>编辑</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </section>
-            <section className={styles.formsGrid}>
-                      <form onSubmit={(e) => void submitForm(e, '/v1/product/variants', (f) => ({ modelId: f.get('modelId'), code: f.get('code'), name: f.get('name'), description: f.get('description') }))}>
-          <span>商品 ID 不变</span><h3>添加商业版本</h3>
-          <select name="modelId" required defaultValue=""><option value="" disabled>选择车型</option>{catalog.models.filter(m => m.product_type_code === 'BIKE').map((m) => <option key={m.id} value={m.id}>{m.code}</option>)}</select>
-          <input name="code" placeholder="例如：PRO" required />
-          <input name="name" placeholder="例如：Pro" required />
-          <input name="description" placeholder="版本说明" />
-          <button>创建版本</button>
-        </form>
-
-        <form onSubmit={(e) => void submitForm(e, '/v1/product/skus', (f) => ({ variantId: f.get('variantId'), sku: f.get('sku'), name: f.get('name'), marketCode: f.get('marketCode') || undefined, colorCode: f.get('colorCode') || undefined, sizeCode: f.get('sizeCode') || undefined }))}>
-          <span>归属当前商品 ID</span><h3>添加 SKU 规格</h3>
-          <select name="variantId" required defaultValue=""><option value="" disabled>选择 Variant</option>{catalog.variants.map((v) => <option key={v.id} value={v.id}>{catalog.models.find((m) => m.id === v.model_id)?.code} · {v.code}</option>)}</select>
-          <input name="sku" placeholder="例如：ALS-FC1-STD-DE-BLK" required />
-          <input name="name" placeholder="SKU 名称（如 FC1 Standard 石墨黑）" required />
-          <div className={styles.inline}><input name="marketCode" maxLength={2} placeholder="市场 DE" /><input name="colorCode" maxLength={32} placeholder="颜色 BLACK" /><input name="sizeCode" maxLength={32} placeholder="尺寸 20" /></div>
-          <button>创建 SKU</button>
-        </form>
-
-            </section>
-          </details>
-        ) : null}
         </div>
       </main>
 
@@ -995,9 +937,71 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
 
       </> : null}
 
+
+      {manageModel ? (
+        <div className={styles.modal} role="presentation" onMouseDown={() => setManageModelId(null)}>
+          <section className={styles.variantSkuDialog} role="dialog" aria-modal="true" aria-label="编辑车型配置及 SKU"
+            onMouseDown={event => event.stopPropagation()} onKeyDown={event => {if(event.key === 'Escape')setManageModelId(null);}}>
+            <header className={styles.variantSkuHeader}>
+              <div><span>产品研发 / 整车产品</span><h2>{manageModel.name} · 版本与 SKU</h2><p>商品 ID {manageModel.product_id} · 型号 {manageModel.code}。直接在弹窗内维护，不另建管理页面。</p></div>
+              <button type="button" className={styles.archiveSecondaryButton} onClick={() => setManageModelId(null)}>关闭</button>
+            </header>
+            {message ? <p className={styles.archiveFeedback} role="status">{message}</p> : null}
+            <div className={styles.variantSkuTables}>
+              <section aria-label="商业配置版本">
+                <h3>商业配置版本 <small>{manageVariants.length} 条</small></h3>
+                <div className={styles.variantSkuScroll}><table className={styles.variantSkuTable}>
+                  <thead><tr><th>版本编码</th><th>名称</th><th>状态</th><th>操作</th></tr></thead>
+                  <tbody>{manageVariants.length ? manageVariants.map(variant => (
+                    <tr key={variant.id}><td>{variant.code}</td><td>{variant.name}</td><td>{statusLabel(variant.status)}</td>
+                      <td><button type="button" className={styles.archiveEdit} onClick={() => {setManageModelId(null);setEdit({entity:'variant',id:variant.id,version:variant.version,name:variant.name,status:variant.status,description:variant.description});}}>编辑</button></td></tr>
+                  )) : <tr><td colSpan={4}>尚无配置版本</td></tr>}</tbody>
+                </table></div>
+              </section>
+              <section aria-label="车型 SKU 规格">
+                <h3>SKU 规格 <small>{manageSkus.length} 条</small></h3>
+                <div className={styles.variantSkuScroll}><table className={styles.variantSkuTable}>
+                  <thead><tr><th>SKU / 内部编号</th><th>所属版本</th><th>市场 / 颜色 / 尺寸</th><th>状态</th><th>操作</th></tr></thead>
+                  <tbody>{manageSkus.length ? manageSkus.map(sku => (
+                    <tr key={sku.id}>
+                      <td><strong>{sku.sku}</strong><small>{sku.name} · SKU ID {sku.sku_number}</small></td>
+                      <td>{manageVariants.find(item => item.id === sku.variant_id)?.code ?? '—'}</td>
+                      <td>{[sku.market_code,sku.color_code,sku.size_code].filter(Boolean).join(' / ') || '未配置'}</td>
+                      <td>{statusLabel(sku.status)}</td>
+                      <td><div className={styles.tableActionGroup}><button type="button" className={styles.archiveEdit} onClick={() => {setManageModelId(null);setEdit({entity:'sku',id:sku.id,version:sku.version,name:sku.name,status:sku.status,marketCode:sku.market_code,colorCode:sku.color_code,sizeCode:sku.size_code});}}>编辑</button><a className={styles.archiveEdit} href={adminSkuPricingHref(sku)}>售价</a></div></td>
+                    </tr>
+                  )) : <tr><td colSpan={5}>尚无 SKU 规格</td></tr>}</tbody>
+                </table></div>
+              </section>
+            </div>
+            <div className={styles.variantSkuForms}>
+              <form onSubmit={event => void submitForm(event,'/v1/product/variants',form => ({modelId:manageModel.id,code:form.get('code'),name:form.get('name'),description:form.get('description')}))}>
+                <h3>新增商业版本</h3>
+                <label>版本编码<input name="code" placeholder="PRO" required /></label>
+                <label>版本名称<input name="name" placeholder="Pro" required /></label>
+                <label>说明<input name="description" placeholder="版本说明" /></label>
+                <button type="submit" className={styles.archivePrimaryButton}>创建版本</button>
+              </form>
+              <form onSubmit={event => void submitForm(event,'/v1/product/skus',form => ({variantId:form.get('variantId'),sku:form.get('sku'),name:form.get('name'),marketCode:form.get('marketCode')||undefined,colorCode:form.get('colorCode')||undefined,sizeCode:form.get('sizeCode')||undefined}))}>
+                <h3>新增 SKU 规格</h3>
+                <label>所属版本<select name="variantId" key={manageVariants.map(v=>v.id).join(',')} required defaultValue=""><option value="" disabled>选择配置版本</option>{manageVariants.map(variant=><option key={variant.id} value={variant.id}>{variant.code} · {variant.name}</option>)}</select></label>
+                <label>SKU 编码<input name="sku" placeholder="ALS-A1-STD-DE-BLK" required /></label>
+                <label>SKU 名称<input name="name" placeholder="A1 Standard 黑色" required /></label>
+                <div className={styles.variantSkuDimensions}>
+                  <label>市场<input name="marketCode" maxLength={2} placeholder="DE" /></label>
+                  <label>颜色<input name="colorCode" maxLength={32} placeholder="BLACK" /></label>
+                  <label>尺寸<input name="sizeCode" maxLength={32} placeholder="20" /></label>
+                </div>
+                <button type="submit" className={styles.archivePrimaryButton} disabled={!manageVariants.length}>创建 SKU</button>
+              </form>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
       {edit ? (
-        <div className={styles.modal} onMouseDown={() => setEdit(null)}>
-          <form className={styles.editCard} onSubmit={saveEdit} onMouseDown={(event) => event.stopPropagation()}>
+        <div className={styles.modal} role="presentation" onMouseDown={() => setEdit(null)}>
+          <form className={styles.editCard} role="dialog" aria-modal="true" aria-label={`编辑${edit.entity==='model'?'整车':edit.entity==='variant'?'配置版本':'SKU'}`} onSubmit={saveEdit} onMouseDown={(event) => event.stopPropagation()} onKeyDown={event => {if(event.key==='Escape')setEdit(null);}}>
             <div><span>编辑 {edit.entity.toUpperCase()}</span><h2>{edit.name}</h2></div>
             <label>名称<input name="name" defaultValue={edit.name} /></label>
             <label>状态<select name="status" defaultValue={edit.status}><option value="DRAFT">草稿</option><option value="ACTIVE">启用</option><option value="RETIRED">已退役</option></select></label>

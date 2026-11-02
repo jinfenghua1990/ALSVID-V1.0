@@ -122,9 +122,11 @@ test('product sidebar links to live sections without permanently highlighting mo
   const ui = read('./renderer.tsx');
   const styles = read('./design-system.css');
   const product = read('../product/product-client.tsx');
-  for (const anchor of ['product-types', 'series', 'vehicle-models', 'vehicle-details', 'models', 'engineering', 'parts']) {
+  for (const anchor of ['product-types', 'series', 'vehicle-models', 'vehicle-details', 'engineering', 'parts']) {
     assert.ok(product.includes('id="' + anchor + '"'), 'product section exists: ' + anchor);
   }
+  // The standalone variant/SKU accordion is retired: its #models section must stay gone.
+  assert.ok(!product.includes('id="models"'), 'retired variant/SKU section is not restored');
   assert.ok(read('./admin-navigation.ts').includes("label: '整车产品（车辆明细）', href: '/admin/product?type=BIKE#vehicle-details'"));
   assert.ok(read('./admin-navigation.ts').includes("'整车产品（车辆明细）'"));
   assert.match(ui, /vehicleModelMenu\.map\(model => \(\{/);
