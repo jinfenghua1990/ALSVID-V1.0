@@ -38,10 +38,11 @@ export const engineeringService = createEngineeringService(database, auditServic
 export const assetService = createAssetService(database, auditService);
 export const procurementService = createProcurementService(database, auditService);
 export const supplierPortalService = createSupplierPortalService(database, auditService);
-export const productionService = createProductionService(database, auditService);
+export const inventoryService = createInventoryService(database, auditService);
+export const productionService = createProductionService(database, auditService, inventoryService);
 export const vehicleService = createVehicleService(database, auditService);
 export const serviceCaseService = createServiceCaseService(database, auditService);
-export const inventoryService = createInventoryService(database, auditService);
+
 export const warehouseService = createWarehouseService(database, auditService, inventoryService);
 export const logisticsService = createLogisticsService(database, auditService, inventoryService);
 export const dealerService = createDealerService(database, auditService);

@@ -16,6 +16,11 @@ export class ProductionController {
     return { data: await productionService.createOrder(requireAuth(request), input) };
   }
 
+  @Post('orders/:id/factory-receipts')
+  async factoryReceipt(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() input: {locationId:string;quantity:number;note?:string}) {
+    return {data:await productionService.receiveFinishedGoods(requireAuth(request),id,input)};
+  }
+
   @Post('orders/from-storefront/:id')
   async createFromStorefront(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() input: { factoryPartnerId: string }) {
     return { data: await productionService.createFromStorefrontOrder(requireAuth(request), id, input?.factoryPartnerId ?? '') };

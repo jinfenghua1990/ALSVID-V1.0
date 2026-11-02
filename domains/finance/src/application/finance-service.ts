@@ -194,6 +194,16 @@ export class FinanceService {
     } catch (error) { this.rethrow(error); }
   }
 
+  async distributeLandedCost(actor:FinanceActor,id:string,input:{category:string;amount:number;note?:string}):Promise<any>{
+    requirePermission(actor,FinanceCapability.LandedCost);
+    const categories=['FREIGHT','INSURANCE','DUTY','IMPORT_VAT','OPERATIONAL_FEE','OTHER','GOODS','ANTI_DUMPING','COUNTERVAILING'];
+    if(!categories.includes(input?.category))throw new FinanceValidationError('Invalid landed cost category');
+    const amount=Number(input?.amount);
+    if(!Number.isFinite(amount)||amount<0||amount>1000000000||Math.abs(amount*100-Math.round(amount*100))>0.00001)throw new FinanceValidationError('Cost amount must be nonnegative with at most two decimals');
+    try{return await this.repository.distributeLandedCost(id,{category:input.category,amountCents:Math.round(amount*100),...(input.note!==undefined?{note:input.note}:{}),actorUserId:actor.userId})}
+    catch(error){this.rethrow(error)}
+  }
+
   async finalizeLandedCostBatch(actor: FinanceActor, id: string): Promise<any> {
     requirePermission(actor, FinanceCapability.LandedCost);
     try {
@@ -221,7 +231,7 @@ export class FinanceService {
     if (code === '23503') throw new FinanceNotFoundError('Referenced Finance/Partner/source entity was not found');
     if (code === '23505') throw new FinanceConflictError(/idempotency/i.test(message) ? 'Duplicate Payment idempotency key' : 'Finance record already exists');
     if (code === '23514') throw new FinanceValidationError(message);
-    if (/not found|requires mapped|must match|cannot|immutable|transition|exceeds|already reversed|Reverse active|requires explicit FX|FX rate|must belong|fully allocated|source Partner|source currency/i.test(message)) throw new FinanceConflictError(message);
+    if (/not found|requires mapped|must match|cannot|immutable|transition|exceeds|already reversed|Reverse active|requires explicit FX|FX rate|must belong|fully allocated|completely allocated|source Partner|source currency/i.test(message)) throw new FinanceConflictError(message);
     throw error;
   }
 }

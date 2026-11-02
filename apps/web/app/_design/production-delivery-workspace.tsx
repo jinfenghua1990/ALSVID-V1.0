@@ -14,17 +14,19 @@ type ProductionOrder = { id:string; source_purchase_order_id:string|null; produc
 type ProductionUnit = { id:string; production_order_id:string; unit_no:number; status:string };
 type Shipment = { id:string; source_purchase_order_id:string|null; shipment_number:string; route_type:string; origin_location_id:string; destination_location_id:string|null; destination_warehouse_name:string|null; status:string; transport_mode:string; planned_eta:string|null; inventory_received_at:string|null };
 type Cargo = { id:string; shipment_id:string; sku_id:string|null; quantity:string; sku:string|null };
-type Handoff = { id:string; shipment_id:string; cargo_id:string };
+type Handoff = { id:string; shipment_id:string; cargo_id:string; received_quantity:string };
 type Batch = { id:string; shipment_id:string; currency:string; status:string };
 type Cost = { id:string; batch_id:string; category:string; batch_currency_amount:string };
+type Allocation = { component_id:string; cargo_id:string; allocated_amount:string };
+type FactoryReceipt = { production_order_id:string; quantity:string; warehouse_name:string };
 type Stock = { item_kind:string; sku_id:string|null; location_id:string; available:string };
-type Warehouse = { id:string; name:string; code:string; country_code:string };
+type Warehouse = { id:string; name:string; code:string; country_code:string; partner_id:string|null; active:boolean };
 type Location = { id:string; warehouse_id:string; name:string; code:string };
 type Facts = {
   procurement: {purchaseOrders:Po[];purchaseOrderLines:PoLine[]};
-  production: {orders:ProductionOrder[];units:ProductionUnit[]};
+  production: {orders:ProductionOrder[];units:ProductionUnit[];factoryReceipts:FactoryReceipt[]};
   logistics: {shipments:Shipment[];cargo:Cargo[];handoffs:Handoff[]};
-  finance: {landedBatches:Batch[];landedComponents:Cost[]};
+  finance: {landedBatches:Batch[];landedComponents:Cost[];landedAllocations:Allocation[]};
   inventory: {balances:Stock[]};
   warehouse: {warehouses:Warehouse[];locations:Location[]};
   partners: Partner[];
@@ -33,8 +35,8 @@ type Facts = {
 };
 const initial: Facts = {
   procurement:{purchaseOrders:[],purchaseOrderLines:[]},
-  production:{orders:[],units:[]},logistics:{shipments:[],cargo:[],handoffs:[]},
-  finance:{landedBatches:[],landedComponents:[]},inventory:{balances:[]},
+  production:{orders:[],units:[],factoryReceipts:[]},logistics:{shipments:[],cargo:[],handoffs:[]},
+  finance:{landedBatches:[],landedComponents:[],landedAllocations:[]},inventory:{balances:[]},
   warehouse:{warehouses:[],locations:[]},partners:[],
   engineering:{buildSpecs:[]},catalog:{skus:[]},
 };
@@ -114,9 +116,9 @@ export function ProductionDeliveryWorkspace(){
   const shipments=selected?facts.logistics.shipments.filter(s=>s.source_purchase_order_id===selected.id):[];
   const shipmentIds=new Set(shipments.map(s=>s.id));
   const shipmentCargo=facts.logistics.cargo.filter(c=>shipmentIds.has(c.shipment_id));
-  const receivedCargoIds=new Set(facts.logistics.handoffs.filter(h=>shipmentIds.has(h.shipment_id)).map(h=>h.cargo_id));
-  const received=shipmentCargo.filter(c=>receivedCargoIds.has(c.id)).reduce((sum,c)=>sum+n(c.quantity),0);
-  const inTransit=shipmentCargo.filter(c=>!receivedCargoIds.has(c.id) && !['DRAFT','CANCELLED'].includes(shipments.find(s=>s.id===c.shipment_id)?.status??'')).reduce((sum,c)=>sum+n(c.quantity),0);
+  const cargoReceived=(id:string)=>facts.logistics.handoffs.filter(h=>h.cargo_id===id).reduce((sum,h)=>sum+n(h.received_quantity),0);
+  const received=shipmentCargo.reduce((sum,c)=>sum+cargoReceived(c.id),0);
+  const inTransit=shipmentCargo.filter(c=>!['DRAFT','CANCELLED'].includes(shipments.find(s=>s.id===c.shipment_id)?.status??'')).reduce((sum,c)=>sum+n(c.quantity)-cargoReceived(c.id),0);
   const ordered=poLines.filter(l=>l.line_kind!=='GIFT').reduce((sum,l)=>sum+n(l.ordered_quantity),0);
   const produced=productionOrders.filter(p=>p.status==='COMPLETED').reduce((sum,p)=>sum+n(p.planned_quantity),0);
   const selectedStep:Step=selected?stepById[selected.id]??'purchase':'purchase';
@@ -124,13 +126,13 @@ export function ProductionDeliveryWorkspace(){
   const purchaseSkus=facts.catalog.skus;
   const linkedBatches=facts.finance.landedBatches.filter(b=>shipmentIds.has(b.shipment_id));
   const linkedCosts=facts.finance.landedComponents.filter(c=>linkedBatches.some(b=>b.id===c.batch_id));
+  const factoryReceipts=facts.production.factoryReceipts??[];
   const warehouseFor=(locationId:string|null)=>{const l=facts.warehouse.locations.find(x=>x.id===locationId);return facts.warehouse.warehouses.find(w=>w.id===l?.warehouse_id);};
   const status=(po:Po)=>{
     const sh=facts.logistics.shipments.filter(x=>x.source_purchase_order_id===po.id);
     const shipIds=new Set(sh.map(x=>x.id));
     const cargo=facts.logistics.cargo.filter(c=>shipIds.has(c.shipment_id));
-    const receivedIds=new Set(facts.logistics.handoffs.filter(h=>shipIds.has(h.shipment_id)).map(x=>x.cargo_id));
-    const qty=cargo.filter(c=>receivedIds.has(c.id)).reduce((s,c)=>s+n(c.quantity),0);
+    const qty=cargo.reduce((sum,c)=>sum+facts.logistics.handoffs.filter(h=>h.cargo_id===c.id).reduce((a,h)=>a+n(h.received_quantity),0),0);
     const total=facts.procurement.purchaseOrderLines.filter(l=>l.purchase_order_id===po.id&&l.line_kind!=='GIFT').reduce((s,l)=>s+n(l.ordered_quantity),0);
     if(total>0&&qty>=total)return '全部入库';
     if(qty>0)return '部分入库';
@@ -203,24 +205,29 @@ export function ProductionDeliveryWorkspace(){
     })}),'已建立费用记录，实际账单可继续录入。');
   }
   function addCost(e:FormEvent<HTMLFormElement>){
-    e.preventDefault();const form=new FormData(e.currentTarget);const batchId=String(form.get('batch'));
-    const batch=linkedBatches.find(b=>b.id===batchId);
-    const c=Number(form.get('amount'));
-    if(!batch||batch.status!=='DRAFT'||!Number.isFinite(c)||c<0){setMessage('费用批次无效或金额不正确');return;}
-    const cargo=shipmentCargo.filter(x=>x.shipment_id===batch.shipment_id);
-    if(cargo.length!==1){setMessage('当前批次包含多个 SKU 或未分配货物，请先在物流中分配，并到财务模块核对分摊');return;}
-    const targetCargo=cargo[0];
-    if(!targetCargo){setMessage('关联货物不存在');return;}
-    void run(async()=>{
-      const added=await api<{id:string}>(`/v1/finance/landed-cost/${batchId}/components`,{method:'POST',body:JSON.stringify({
-        category:form.get('category'),currency:batch.currency,amount:c,batchCurrencyAmount:c,
-        capitalizable:form.get('category')!=='IMPORT_VAT',
-      })});
-      if(!added?.id)throw new Error('费用已提交但回执不完整，请刷新核对，勿重复录入');
-      await api(`/v1/finance/landed-cost/components/${added.id}/allocations`,{method:'POST',body:JSON.stringify({
-        cargoId:targetCargo.id,allocatedAmount:c,basisValue:n(targetCargo.quantity),
-      })});
-    },'实际费用已记录并分摊到对应货物。');
+    e.preventDefault();const f=new FormData(e.currentTarget),batchId=String(f.get('batch'));
+    const batch=linkedBatches.find(b=>b.id===batchId),cost=Number(f.get('amount'));
+    if(!batch||batch.status!=='DRAFT'||!Number.isFinite(cost)||cost<0){setMessage('费用单或金额不正确');return;}
+    if(!shipmentCargo.some(x=>x.shipment_id===batch.shipment_id)){setMessage('需要先分配发运货物');return;}
+    void run(()=>api(`/v1/finance/landed-cost/${batchId}/distribute`,{
+      method:'POST',body:JSON.stringify({category:f.get('category'),amount:cost,note:f.get('note')||undefined}),
+    }),'真实费用已按每个 SKU 数量原子化分摊。');
+  }
+  function receiveFactory(e:FormEvent<HTMLFormElement>,orderId:string){
+    e.preventDefault();const f=new FormData(e.currentTarget),quantity=Number(f.get('quantity'));
+    if(!Number.isSafeInteger(quantity)||quantity<=0){setMessage('实际入库数量无效');return;}
+    if(!window.confirm('已核对工厂成品实际数量且全部质检合格？此操作会增加工厂仓实际库存。'))return;
+    void run(()=>api(`/v1/production/orders/${orderId}/factory-receipts`,{
+      method:'POST',body:JSON.stringify({locationId:f.get('location'),quantity,note:f.get('note')||undefined}),
+    }),'已计入工厂成品真实库存，可在发运时预留。');
+  }
+  function receiveCargo(e:FormEvent<HTMLFormElement>,shipmentId:string,cargoId:string){
+    e.preventDefault();const f=new FormData(e.currentTarget),quantity=Number(f.get('quantity'));
+    if(!Number.isSafeInteger(quantity)||quantity<=0){setMessage('实际签收数量无效');return;}
+    if(!window.confirm('已经核对仓库签收数量、货损和实际入库凭证？仅确认合格实收货物。'))return;
+    void run(()=>api(`/v1/logistics/shipments/${shipmentId}/receive-warehouse`,{
+      method:'POST',body:JSON.stringify({lines:[{cargoId,quantity}],note:f.get('note')||undefined}),
+    }),'本批实际入库已登记，未收数量仍保留待处理。');
   }
   const focus=shipments.find(s=>s.id===focusedShipmentId)??shipments[0]??null;
   return <div className={styles.root}>
@@ -290,7 +297,22 @@ export function ProductionDeliveryWorkspace(){
                 {u.status==='QC_PASSED'?'已通过':null}</td></tr>;})}
           </tbody></table></div>{productionUnits.length>unitLimit?<button type="button" onClick={()=>setUnitLimit(x=>x+20)}>显示更多车辆</button>:null}
         </div>:null}
-        {selected.status==='CONFIRMED'||selected.status==='PARTIALLY_FULFILLED'||selected.status==='FULFILLED'?<form className={styles.subform} onSubmit={createProduction}>
+        {productionOrders.filter(o=>o.status==='COMPLETED').map(o=>{
+          const already=factoryReceipts.filter(x=>x.production_order_id===o.id).reduce((sum,x)=>sum+n(x.quantity),0);
+          const remain=Math.max(0,n(o.planned_quantity)-already);
+          const locations=facts.warehouse.locations.filter(l=>facts.warehouse.warehouses.some(w=>w.id===l.warehouse_id&&w.partner_id===o.factory_partner_id&&w.country_code==='CN'&&w.active));
+          return <form key={o.id} className={styles.subform} onSubmit={e=>receiveFactory(e,o.id)}>
+            <h4>工厂成品入库 · {o.production_order_number}</h4>
+            <p className={styles.hint}>完工 {o.planned_quantity} 台 · 已实收 {already} 台 · 待入库 {remain} 台</p>
+            <div className={styles.fields}>
+              <label>工厂仓库库位<select name="location" required defaultValue=""><option value="">选择关联工厂的国内仓库</option>{locations.map(l=><option key={l.id} value={l.id}>{warehouseFor(l.id)?.name} / {l.code}</option>)}</select></label>
+              <label>本次实收数量<input type="number" name="quantity" required min="1" step="1" max={remain} defaultValue={remain||undefined}/></label>
+              <label>验收凭证 / 备注<input name="note" placeholder="工厂出厂清点单号"/></label>
+            </div><button className={styles.primary} disabled={busy||remain===0||locations.length===0}>确认实际成品入库</button>
+            {locations.length===0?<p className={styles.hint}>请先在仓库设置中建立「工厂合作方关联的中国仓库」及其库位。</p>:null}
+          </form>;
+        })}
+                {selected.status==='CONFIRMED'||selected.status==='PARTIALLY_FULFILLED'||selected.status==='FULFILLED'?<form className={styles.subform} onSubmit={createProduction}>
           <h4>＋ 新增关联生产单</h4><div className={styles.fields}>
             <label>量产配置<select name="buildSpec" required defaultValue=""><option value="">选择已发布配置</option>{facts.engineering.buildSpecs.filter(b=>b.status==='RELEASED'&&poLines.some(l=>l.sku_id===b.sku_id)).map(b=><option key={b.id} value={b.id}>{b.code}</option>)}</select></label>
             <label>生产工厂<select name="factory" required defaultValue={factoryPartners.some(p=>p.id===selected.supplier_partner_id)?selected.supplier_partner_id:''}><option value="">选择工厂</option>{factoryPartners.map(p=><option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
@@ -313,7 +335,7 @@ export function ProductionDeliveryWorkspace(){
           {!shipments.length?<tr><td colSpan={6}>尚无关联发运批次。生产和真实工厂库存确认后再发运。</td></tr>:null}</tbody></table></div>
         <form className={styles.subform} onSubmit={createShipment}>
           <h4>＋ 新建发运批次</h4><div className={styles.fields}>
-            <label>发货库位<select name="origin" required defaultValue=""><option value="">选择工厂待发库位</option>{facts.warehouse.locations.map(loc=><option key={loc.id} value={loc.id}>{warehouseFor(loc.id)?.name} / {loc.code}</option>)}</select></label>
+            <label>发货库位<select name="origin" required defaultValue=""><option value="">选择工厂待发库位</option>{facts.warehouse.locations.filter(l=>facts.warehouse.warehouses.some(w=>w.id===l.warehouse_id&&w.partner_id===selected.supplier_partner_id&&w.country_code==='CN'&&w.active)).map(loc=><option key={loc.id} value={loc.id}>{warehouseFor(loc.id)?.name} / {loc.code}</option>)}</select></label>
             <label>目的仓库 / 库位<select name="destination" required defaultValue=""><option value="">选择国内仓或德国仓</option>{facts.warehouse.locations.filter(l=>['CN','DE'].includes(warehouseFor(l.id)?.country_code??'')).map(loc=><option key={loc.id} value={loc.id}>{warehouseFor(loc.id)?.name} / {loc.code}</option>)}</select></label>
             <label>运输方式<select name="mode" defaultValue="SEA"><option value="SEA">海运</option><option value="ROAD">陆运</option><option value="RAIL">铁路</option><option value="AIR">空运</option><option value="MULTIMODAL">多式联运</option></select></label>
             <label>预计发货<input type="date" name="etd"/></label>
@@ -339,24 +361,44 @@ export function ProductionDeliveryWorkspace(){
           <button disabled={busy||!available('finance')}>为本批次建立费用记录</button>
         </form>:null}
         {focus&&linkedBatches.filter(b=>b.shipment_id===focus.id).map(batch=><div key={batch.id}>
-          <p>费用单 {batch.id.slice(0,8)} · {batch.status} · 实际已录入 {amount(linkedCosts.filter(c=>c.batch_id===batch.id).reduce((s,c)=>s+n(c.batch_currency_amount),0),batch.currency)}</p>
+          <p>费用单 {batch.id.slice(0,8)} · {batch.status==='FINALIZED'?'已结算':'待结算'} · 总费用 {amount(linkedCosts.filter(c=>c.batch_id===batch.id).reduce((x,c)=>x+n(c.batch_currency_amount),0),batch.currency)}</p>
           {batch.status==='DRAFT'?<form className={styles.subform} onSubmit={addCost}>
-            <input type="hidden" name="batch" value={batch.id}/><div className={styles.fields}>
-              <label>费用类型<select name="category"><option value="FREIGHT">运输费</option><option value="INSURANCE">保险</option><option value="DUTY">关税</option><option value="OPERATIONAL_FEE">清关服务及操作费</option><option value="IMPORT_VAT">进口增值税（单独核算）</option><option value="OTHER">其他费用</option></select></label>
-              <label>实际金额（{batch.currency}）<input type="number" name="amount" min="0" step="0.01" required/></label>
-            </div><div className={styles.actions}><button disabled={busy}>保存实际费用并分摊</button></div>
+            <input name="batch" type="hidden" value={batch.id}/>
+            <div className={styles.fields}>
+              <label>费用类型<select name="category"><option value="FREIGHT">运费</option><option value="INSURANCE">保险费</option><option value="DUTY">关税</option><option value="OPERATIONAL_FEE">清关费 / 操作费</option><option value="IMPORT_VAT">进口增值税（不计成本）</option><option value="OTHER">其他费用</option></select></label>
+              <label>实际费用（{batch.currency}）<input type="number" name="amount" min="0" step="0.01" required/></label>
+              <label>费用凭证<input name="note" placeholder="物流账单 / 清关票据"/></label>
+            </div><button disabled={busy}>录入并按 SKU 数量分摊</button>
           </form>:null}
+          <div className={styles.scroll}><table><thead><tr><th>货物 / SKU</th><th>发货数量</th><th>累计成本分摊</th><th>单件成本增量</th></tr></thead><tbody>
+            {shipmentCargo.filter(c=>c.shipment_id===batch.shipment_id).map(c=>{
+              const sum=(facts.finance.landedAllocations??[]).filter(a=>a.cargo_id===c.id&&linkedCosts.some(t=>t.id===a.component_id&&t.batch_id===batch.id&&t.category!=='IMPORT_VAT')).reduce((x,a)=>x+n(a.allocated_amount),0);
+              return <tr key={c.id}><td>{c.sku??c.id.slice(0,8)}</td><td>{c.quantity}</td><td>{amount(sum,batch.currency)}</td><td>{n(c.quantity)>0?amount(sum/n(c.quantity),batch.currency):'—'}</td></tr>;
+            })}
+          </tbody></table></div>
+          {batch.status==='DRAFT'&&linkedCosts.some(c=>c.batch_id===batch.id)?<button disabled={busy} onClick={()=>{
+            if(window.confirm('已收齐本次运输实际费用凭证？结算后不可继续添加费用。'))void run(()=>api(`/v1/finance/landed-cost/${batch.id}/finalize`,{method:'POST',body:'{}'}),'实际费用已完成结算。');
+          }}>确认本批费用结算</button>:null}
         </div>)}
         <p className={styles.hint}>物流询价接口仍未接通，当前不显示虚构的预估价；实际费用统一写入现有财务到岸成本域。不同币种需先办理汇率核算。</p>
       </div>:null}
       {selectedStep==='receipt'?<div className={styles.content}>
         <div className={styles.panelHead}><h3>仓库实际入库</h3><span>累计入库 {received} / {ordered}</span></div>
-        <div className={styles.scroll}><table><thead><tr><th>发运批次</th><th>仓库</th><th>发运数量</th><th>实收入库状态</th><th>操作</th></tr></thead><tbody>
-          {shipments.map(s=><tr key={s.id}><td>{s.shipment_number}</td><td>{warehouseFor(s.destination_location_id)?.name??'—'}</td><td>{shipmentCargo.filter(c=>c.shipment_id===s.id).reduce((a,c)=>a+n(c.quantity),0)}</td>
-            <td>{s.inventory_received_at?'已入库':s.status==='DELIVERED'?'待仓库实收确认':'未到仓'}</td><td>{s.status==='DELIVERED'&&!s.inventory_received_at?<button disabled={busy} onClick={()=>{if(window.confirm('已核对仓库真实收货数量和凭证？确认后将正式增加仓库库存，且不能重复执行。'))void run(()=>api(`/v1/logistics/shipments/${s.id}/receive-warehouse`,{method:'POST',body:'{}'}),'仓库入库已记入真实库存流水');}}>确认实际入库</button>:'—'}</td>
-          </tr>)}
-          {!shipments.length?<tr><td colSpan={5}>暂无待入库发运批次</td></tr>:null}</tbody></table></div>
-        <p className={styles.hint}>只确认已取得真实签收凭证且数量一致的发运批次。第三方海外仓须先核验其 WMS 回执；数量短少时不要整批确认，应先核查差异。</p>
+        <div className={styles.scroll}><table><thead><tr><th>批次</th><th>目的仓</th><th>SKU</th><th>应收</th><th>已收</th><th>待收</th><th>本次实收入库</th></tr></thead><tbody>
+          {shipmentCargo.map(c=>{
+            const sh=shipments.find(x=>x.id===c.shipment_id);
+            if(!sh)return null;
+            const done=cargoReceived(c.id),pending=n(c.quantity)-done;
+            return <tr key={c.id}><td>{sh.shipment_number}</td><td>{warehouseFor(sh.destination_location_id)?.name??'—'}</td><td>{c.sku??'整车'}</td><td>{c.quantity}</td><td>{done}</td><td>{pending}</td>
+              <td>{sh.status==='DELIVERED'&&pending>0&&!sh.inventory_received_at?<form className={styles.actions} onSubmit={e=>receiveCargo(e,sh.id,c.id)}>
+                <input aria-label="本次实收数量" name="quantity" type="number" min="1" max={pending} step="1" defaultValue={pending} required style={{width:66}}/>
+                <input aria-label="收货凭证及货损备注" name="note" placeholder="签收单号 / 差异" style={{width:150}}/>
+                <button disabled={busy}>确认入库</button>
+              </form>:pending===0?'已入库':'等待真实签收'}</td></tr>;
+          })}
+          {!shipmentCargo.length?<tr><td colSpan={7}>暂无可入库的发运货物</td></tr>:null}
+        </tbody></table></div>
+        <p className={styles.hint}>只确认已取得真实签收凭证且数量一致的发运批次。第三方海外仓须先核验其 WMS 回执；数量短少、破损时只录合格实收数量，未收货物不计库存。</p>
       </div>:null}
     </section>:<p className={styles.warning}>当前单据未在已授权的采购数据中找到。请返回列表核验，不要重复建单。</p>}
   </div>;

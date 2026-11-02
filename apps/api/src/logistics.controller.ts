@@ -58,8 +58,8 @@ export class LogisticsController {
   }
 
   @Post('shipments/:id/receive-warehouse')
-  async receiveWarehouse(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
-    return { data: await logisticsService.receiveWarehouseShipment(requireAuth(request), id) };
+  async receiveWarehouse(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() input?: {lines?:{cargoId:string;quantity:number}[];note?:string}) {
+    return { data: await logisticsService.receiveWarehouseShipment(requireAuth(request), id, input) };
   }
 
   @Post('shipments/:id/receive-germany')

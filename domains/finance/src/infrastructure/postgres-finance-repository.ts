@@ -128,6 +128,32 @@ export class PostgresFinanceRepository implements FinanceRepository {
     return (await this.database.query<any>(`INSERT INTO finance.landed_cost_allocations(component_id,cargo_id,basis_value,allocated_amount,created_by) VALUES ($1,$2,$3,$4,$5) RETURNING *`, [componentId,input.cargoId,input.basisValue,input.allocatedAmount,input.actorUserId])).rows[0];
   }
 
+  async distributeLandedCost(batchId:string,input:{category:string;amountCents:number;note?:string;actorUserId:string}):Promise<any>{
+    return this.transaction(async e=>{
+      const batch=(await e.query<{id:string;shipment_id:string;currency:string;status:string}>(`SELECT id,shipment_id,currency,status FROM finance.landed_cost_batches WHERE id=$1 FOR UPDATE`,[batchId])).rows[0];
+      if(!batch||batch.status!=='DRAFT')throw new Error('Landed cost batch must be draft');
+      const cargo=(await e.query<{id:string;quantity:string}>(`SELECT id,quantity::text FROM logistics.shipment_cargo WHERE shipment_id=$1 ORDER BY created_at,id FOR UPDATE`,[batch.shipment_id])).rows;
+      if(!cargo.length)throw new Error('Shipment has no allocated goods to distribute cost');
+      const weight=cargo.map(x=>Number(x.quantity));
+      if(weight.some(x=>!Number.isFinite(x)||x<=0))throw new Error('Invalid cargo quantity');
+      const total=weight.reduce((a,b)=>a+b,0);
+      let centsUsed=0;
+      const component=(await e.query<{id:string}>(`INSERT INTO finance.landed_cost_components(batch_id,category,amount,currency,batch_currency_amount,capitalizable,note,created_by)
+        VALUES ($1,$2,$3,$4,$3,$5,$6,$7) RETURNING id`,[
+        batchId,input.category,(input.amountCents/100).toFixed(2),batch.currency,input.category!=='IMPORT_VAT',input.note?.trim()??'',input.actorUserId
+      ])).rows[0];
+      if(!component)throw new Error('Cost component insertion failed');
+      for(let i=0;i<cargo.length;i++){
+        const row=cargo[i]!;
+        const cumulativeWeight=weight.slice(0,i+1).reduce((sum,q)=>sum+q,0);
+        const cents=Math.round(input.amountCents*cumulativeWeight/total)-centsUsed;
+        centsUsed+=cents;
+        await e.query(`INSERT INTO finance.landed_cost_allocations(component_id,cargo_id,basis_value,allocated_amount,created_by) VALUES ($1,$2,$3,$4,$5)`,[component.id,row.id,row.quantity,(cents/100).toFixed(2),input.actorUserId]);
+      }
+      return {componentId:component.id,currency:batch.currency,allocationLines:cargo.length,amount:(input.amountCents/100).toFixed(2)};
+    });
+  }
+
   async finalizeLandedCostBatch(id: string, actor: string): Promise<any | null> {
     const result = await this.database.query<any>(`UPDATE finance.landed_cost_batches SET status='FINALIZED',finalized_at=now(),finalized_by=$2 WHERE id=$1 AND status='DRAFT' RETURNING *`, [id,actor]);
     return result.rows[0] ?? null;
