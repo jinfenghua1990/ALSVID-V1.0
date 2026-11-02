@@ -56,7 +56,6 @@ Shared packages are intentionally narrow:
 - `@alsvid/ports` — provider-neutral external capability ports
 - `@alsvid/observability` — structured logging
 - `@alsvid/jobs` — durable PostgreSQL job mechanics
-- `@alsvid/contracts` — transport/shared contract primitives where genuinely cross-cutting
 - `@alsvid/ui` — reusable application-shell and UI primitives
 
 Shared packages must not become a dumping ground for business rules or Domain-owned data models.

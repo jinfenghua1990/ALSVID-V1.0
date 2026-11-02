@@ -70,21 +70,8 @@ test('P0 metrics accept record lists only and never turn missing data into zero'
   assert.equal(parseP0Source(staff, { data: { users: [] } }, time).state, 'unavailable');
 });
 
-test('P0 legacy verbose summary is not mounted on the current renderer', () => {
-  const component = read('p0-operations-center.tsx');
-  const css = read('p0-operations-center.module.css');
+test('retired P0 component is not mounted in active Admin renderer', () => {
   const renderer = read('renderer.tsx');
   assert.doesNotMatch(renderer, /<P0OperationsCenter \/>/);
   assert.doesNotMatch(renderer, /<LiveWorkbench \/>/);
-  assert.match(component, /Promise\.all\(P0_READ_SOURCES\.map/);
-  assert.match(component, /\/api\/control/);
-  assert.match(component, /cache: 'no-store', method: 'GET'/);
-  assert.doesNotMatch(component, /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/);
-  assert.match(component, /response\.status === 401/);
-  assert.match(component, /response\.status === 403/);
-  assert.match(component, /数据源不可用/);
-  assert.match(component, /不按零条数据计算/);
-  assert.match(component, /aria-pressed/);
-  assert.match(css, /@media \(max-width: 760px\)/);
 });
-
