@@ -1,5 +1,5 @@
 import { AppShell } from '@alsvid/ui';
-import { navigationFor } from '../../app-navigation';
+import { navigationFor } from '../_design/admin-navigation';
 
 const providerStatuses = [
   ['ALSVID 账户', '骨架已预留', '员工与 ALSVID User / Role 的关联将在这里统一管理。'],
