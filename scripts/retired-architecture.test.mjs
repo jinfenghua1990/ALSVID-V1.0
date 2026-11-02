@@ -30,6 +30,10 @@ test('retired parallel frameworks cannot be reintroduced into ALSVID production'
     'apps/web/app/theme-legacy.css',
     'apps/web/app/admin/workbench-v2/page.tsx',
     'apps/web/app/admin/workbench-v3/page.tsx',
+    'apps/web/app/admin/workbench-panels.tsx',
+    'apps/web/app/admin/workbench.module.css',
+    'apps/web/app/_design/live-operations.tsx',
+    'apps/web/app/_design/live-operations.json',
   ];
   for (const path of removed) assert.equal(exists(path), false, 'Retired path revived: ' + path);
   const source = read('apps/web/app/_design/renderer.tsx');
@@ -79,6 +83,8 @@ test('retired Shopify runtime cannot accept or replay orders or create new chann
   assert.ok(!factory.includes('ShopifyNormalizer'));
   assert.ok(!factory.includes('CommerceIngestionPort'));
   assert.ok(commerce.includes("input.provider!=='AMAZON'&&input.provider!=='OTHER'"));
+  assert.ok(read('domains/commerce/src/core/model.ts').includes("CommerceProvider='AMAZON'|'OTHER'"));
+  assert.ok(!read('domains/commerce/src/core/model.ts').includes("CommerceProvider='SHOPIFY'"));
   for (const retired of ['<option value="SHOPIFY">', 'SHOPIFY ADAPTER', 'onSubmit={ingestShopify}', '>重放</button>']) {
     assert.ok(!ui.includes(retired), 'retired UI: ' + retired);
   }
