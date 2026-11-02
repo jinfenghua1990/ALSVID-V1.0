@@ -15,6 +15,8 @@
 - 产品 SKU/BOM → 生产 → 库存/订单 → VIN/车主/售后的受影响环节及联动验证：
 - 是否新增独立工程、锁文件、数据库、重复接口/身份主档、部署入口或拆服务？（默认否；是则贴负责人授权 + ADR）：
 
+- **数字 ID 标准**：本次是否新增业务实体 / 外键 / SKU、Product 引用？是否严格沿用唯一数字主键、既有 6 位 Product ID / 9 位 SKU 编号，避免 UUID 或 `code` 成为第二权威？（参见 `docs/IDENTIFIER_STANDARD_2026-11-02.md`）
+
 ## 协作与验证
 
 - `node scripts/check-single-system-contract.mjs`：
