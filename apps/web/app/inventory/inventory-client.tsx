@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import styles from './inventory.module.css';
 
 type ItemKind = 'PART' | 'SKU' | 'VEHICLE';
+type FactoryPartner = { id:string;displayName:string;roles?:string[] };
 type Warehouse = { id: string; code: string; name: string; country_code: string; timezone: string; partner_name: string | null; active: boolean };
 type Location = { id: string; warehouse_id: string; warehouse_code: string; warehouse_name: string; code: string; name: string; location_type: string; active: boolean };
 type Part = { id: string; part_number: string; name: string; default_unit: string };
@@ -73,6 +74,8 @@ export default function InventoryClient({ embedded = false }: { embedded?: boole
   }, []);
   const [inventory, setInventory] = useState<InventorySummary>(emptyInventory);
   const [warehouse, setWarehouse] = useState<WarehouseSummary>(emptyWarehouse);
+  const [factoryPartners,setFactoryPartners]=useState<FactoryPartner[]>([]);
+  const [factorySourceError,setFactorySourceError]=useState(false);
   const [parts, setParts] = useState<Part[]>([]);
   const [skus, setSkus] = useState<Sku[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -115,8 +118,8 @@ export default function InventoryClient({ embedded = false }: { embedded?: boole
   }
 
   async function reload() {
-    const [inventoryResult, warehouseResult, engineeringResult, productResult, vehiclesResult] = await Promise.allSettled([
-      api('/v1/inventory'), api('/v1/warehouse'), api('/v1/engineering'), api('/v1/product/catalog'), api('/v1/vehicles'),
+    const [inventoryResult, warehouseResult, engineeringResult, productResult, vehiclesResult, partnersResult] = await Promise.allSettled([
+      api('/v1/inventory'), api('/v1/warehouse'), api('/v1/engineering'), api('/v1/product/catalog'), api('/v1/vehicles'), api('/v1/partners'),
     ]);
 
     if (inventoryResult.status === 'fulfilled') {
@@ -148,6 +151,14 @@ export default function InventoryClient({ embedded = false }: { embedded?: boole
       setSkus(productResult.value.skus);
       sourceReady('product');
     } else sourceFailed('product', productResult.status === 'rejected' ? productResult.reason : new Error('商品接口返回的数据格式异常'), '商品 SKU 暂不可用');
+
+    if (partnersResult.status === 'fulfilled' && Array.isArray(partnersResult.value)) {
+      setFactoryPartners((partnersResult.value as FactoryPartner[]).filter(p=>Array.isArray(p.roles)&&p.roles.includes('FACTORY')));
+      setFactorySourceError(false);
+    } else {
+      setFactoryPartners([]);
+      setFactorySourceError(true);
+    }
 
     if (vehiclesResult.status === 'fulfilled' && Array.isArray(vehiclesResult.value)) {
       setVehicles(vehiclesResult.value);
@@ -281,10 +292,17 @@ export default function InventoryClient({ embedded = false }: { embedded?: boole
         </section>
 
         <section className={styles.topGrid} id="warehouse-setup" aria-label="仓库、库位与调拨主数据">
-          <form className={styles.card} onSubmit={(event) => void submit(event, '/v1/warehouse/warehouses', (form) => ({ code: form.get('code'), name: form.get('name'), countryCode: form.get('countryCode'), timezone: form.get('timezone') }))}>
+          <form className={styles.card} onSubmit={(event) => void submit(event, '/v1/warehouse/warehouses', (form) => ({ code: form.get('code'), name: form.get('name'), countryCode: form.get('countryCode'), timezone: form.get('timezone'), partnerId: form.get('partnerId') || undefined }))}>
             <span>仓库主数据</span><h2>创建仓库</h2>
             <div className={styles.inline}><input name="code" placeholder="例如：DE-BERLIN" required /><input name="name" placeholder="例如：德国仓" required /></div>
             <div className={styles.inline}><input name="countryCode" defaultValue="DE" maxLength={2} required /><input name="timezone" defaultValue="Europe/Berlin" required /></div>
+            <label>关联合作工厂（工厂成品入库时必须选择）
+              <select name="partnerId" defaultValue="">
+                <option value="">普通仓库（不关联工厂）</option>
+                {factoryPartners.map(p=><option key={p.id} value={p.id}>{p.displayName}</option>)}
+              </select>
+            </label>
+            {factorySourceError&&<p className={styles.empty}>工厂资料暂时不可读取，不能创建关联工厂仓。请刷新确认后再选择。</p>}
             <button>创建仓库</button>
           </form>
 
