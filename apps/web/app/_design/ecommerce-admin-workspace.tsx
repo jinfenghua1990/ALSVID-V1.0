@@ -10,7 +10,7 @@ import { EcommercePricingWorkspace } from './ecommerce-pricing-workspace';
 import { EcommerceHomepageWorkspace } from './ecommerce-homepage-workspace';
 import { EcommerceOrdersWorkspace } from './ecommerce-orders-workspace';
 
-type Model = { id: string; code: string; name: string; status: string; product_type_code: string };
+type Model = { id: string; product_id: string; code: string; name: string; status: string; product_type_code: string };
 type EcommerceView = 'overview' | 'products' | 'publications' | 'homepage' | 'inventory' | 'pricing' | 'orders';
 
 function viewForRoute(route: string): EcommerceView {

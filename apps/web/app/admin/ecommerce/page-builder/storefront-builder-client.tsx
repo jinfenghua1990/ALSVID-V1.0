@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import styles from './storefront-builder.module.css';
+import {numericProductBlock,verifiedPublishedProducts,type PublishedProductForBuilder} from './numeric-product-block';
 
 type EditorApi = {
   getProjectData: () => unknown;
@@ -12,6 +13,7 @@ type EditorApi = {
   stopCommand: (id: string) => unknown;
   setDevice: (name: string) => void;
   setComponents: (content: string) => void;
+  addComponents: (content: string) => unknown;
   setStyle: (content: string) => void;
   on: (event: string, callback: () => void) => void;
   destroy: () => void;
@@ -105,6 +107,40 @@ export default function StorefrontBuilderClient() {
   const [draftVersion, setDraftVersion] = useState<number | null>(null);
   const [draftBusy, setDraftBusy] = useState(false);
   const [notice, setNotice] = useState('装修预览已准备就绪。当前不会修改正式商城。');
+  const [publishedProducts,setPublishedProducts]=useState<PublishedProductForBuilder[]>([]);
+  const [publishedState,setPublishedState]=useState<'loading'|'ready'|'error'>('loading');
+  const [publishedError,setPublishedError]=useState('');
+  const [selectedProductId,setSelectedProductId]=useState('');
+  const [productLocale,setProductLocale]=useState<'zh'|'de'|'en'>('de');
+
+  const loadPublishedProducts=async(signal?:AbortSignal)=>{
+    setPublishedState('loading');setPublishedError('');
+    try{
+      const res=await fetch('/api/control/v1/product/public/catalog',{cache:'no-store',...(signal?{signal}:{})});
+      if(!res.ok)throw new Error('已发布商品目录接口不可用');
+      const payload=await res.json() as {data?:unknown};
+      const products=verifiedPublishedProducts(payload?.data);
+      if(signal?.aborted)return;
+      setPublishedProducts(products);
+      setSelectedProductId(previous=>products.some(p=>p.productId===previous)?previous:'');
+      setPublishedState('ready');
+    }catch(error){
+      if(signal?.aborted)return;
+      setPublishedProducts([]);setSelectedProductId('');
+      setPublishedState('error');setPublishedError(error instanceof Error?error.message:'商品目录读取失败');
+    }
+  };
+  useEffect(()=>{const controller=new AbortController();void loadPublishedProducts(controller.signal);return()=>controller.abort()},[]);
+
+  const insertPublishedProduct=()=>{
+    const editor=editorRef.current;
+    if(!ready||!editor||previewing)return;
+    const selected=publishedProducts.find(p=>p.productId===selectedProductId);
+    if(!selected){setNotice('请先选择已发布的真实数字商品 ID。');return;}
+    editor.addComponents(numericProductBlock(selected,productLocale));
+    setDirty(true);
+    setNotice('已加入商品 #'+selected.productId+'。草稿保留 data-product-id 数字关联；正式官网未发布，也没有生成售价或库存。');
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -337,6 +373,20 @@ export default function StorefrontBuilderClient() {
       </div>
 
       {error ? <div className={styles.error} role="alert">{error}</div> : null}
+
+      <section className={styles.productBinder} aria-label="按数字商品 ID 关联装修素材">
+        <div><strong>关联真实商品 ID（6 位数字）</strong><p>只读取已审核发布的商品；绑定到装修草稿，不创建商品，也不代表自动开放下单。</p></div>
+        <label>选择商品<select aria-label="选择数字商品 ID" value={selectedProductId} onChange={e=>setSelectedProductId(e.target.value)} disabled={publishedState!=='ready'}>
+          <option value="">选择商品 ID</option>{publishedProducts.map(p=><option key={p.productId} value={p.productId}>{p.productId} · {p.title.zh} ({p.code})</option>)}
+        </select></label>
+        <label>语言<select aria-label="商品展示语言" value={productLocale} onChange={e=>setProductLocale(e.target.value as 'zh'|'de'|'en')}>
+          <option value="de">德语</option><option value="en">英语</option><option value="zh">中文</option>
+        </select></label>
+        <button type="button" className={styles.primaryButton} onClick={insertPublishedProduct} disabled={!ready||previewing||publishedState!=='ready'||!selectedProductId}>插入商品模块</button>
+        <button type="button" className={styles.secondaryButton} onClick={()=>void loadPublishedProducts()} disabled={publishedState==='loading'}>刷新商品</button>
+        {publishedState==='error'?<p role="alert" className={styles.error}>商品读取失败：{publishedError}。不能使用示例数据代替。</p>:null}
+        {publishedState==='ready'&&!publishedProducts.length?<p>暂无可绑定的已发布商品；请先到商城商品列表完成审核发布。</p>:null}
+      </section>
 
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>

@@ -317,11 +317,15 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
     try {
-      await api(endpoint, { method: 'POST', body: JSON.stringify(body(form)) });
+      const saved=await api(endpoint, { method: 'POST', body: JSON.stringify(body(form)) }) as {product_id?:string}|null;
+      const createdProductId=endpoint==='/v1/product/models'&&/^[1-9][0-9]{5}$/.test(String(saved?.product_id??''))
+        ? String(saved?.product_id):null;
       formElement.reset();
       onSaved?.();
       const verified = await reload();
-      setMessage(verified ? '已保存，列表已重新核对。' : '写入请求成功，但列表刷新失败；请先核对记录，不要重复提交。');
+      setMessage(verified
+        ? createdProductId ? '商品已创建，自动分配数字商品 ID：'+createdProductId+'（永久不变）。' : '已保存，列表已重新核对。'
+        : '写入请求成功'+(createdProductId?'，商品 ID '+createdProductId:'')+'，但列表刷新失败；请先核对记录，不要重复提交。');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '保存失败');
     }
@@ -774,7 +778,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                    def.product_type_code===(createKind==='bike'?'BIKE':newModelType)))},
               () => setCreateKind(null))}>
             <div className={styles.createCardHeading}>
-              <div><span>商品档案</span><h2>{createKind === 'bike' ? '新建整车' : createKind === 'part' ? '新建生产零件' : '新建可售配件'}</h2><p>填写基础信息后保存；不会自动建立 SKU、BOM 或商城绑定。</p></div>
+              <div><span>商品档案</span><h2>{createKind === 'bike' ? '新建整车' : createKind === 'part' ? '新建生产零件' : '新建可售配件'}</h2><p>填写基础信息后保存；商品 ID 由系统自动分配六位数字，永久不变。不会自动建立 SKU、BOM 或商城绑定。</p></div>
               <button type="button" className={styles.createClose} aria-label="关闭" onClick={() => setCreateKind(null)}>×</button>
             </div>
             {createKind === 'part' ? (
