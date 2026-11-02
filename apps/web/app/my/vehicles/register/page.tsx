@@ -32,7 +32,7 @@ export default async function RegisterVehiclePage() {
             <h2>为什么需要核验？</h2>
             <p>My ALSVID 会展示保修、维修、服务历史等车主数据，因此车辆必须先建立可信的所有权关系。</p>
             <div className={styles.steps}>
-              <div className={styles.step}><span className={styles.stepIndex}>A</span><div><strong>在线购买</strong><p>可结合 Shopify 订单与交付事实核验。</p></div></div>
+              <div className={styles.step}><span className={styles.stepIndex}>A</span><div><strong>在线购买</strong><p>可结合 ALSVID 正式订单、交付记录与 VIN 事实核验。</p></div></div>
               <div className={styles.step}><span className={styles.stepIndex}>B</span><div><strong>经销商购买</strong><p>可结合 Dealer 交付记录建立车辆关系。</p></div></div>
               <div className={styles.step}><span className={styles.stepIndex}>C</span><div><strong>其他情况</strong><p>进入人工审核，不直接自动取得车辆权限。</p></div></div>
             </div>
