@@ -7,7 +7,7 @@ import styles from './production-delivery-workspace.module.css';
 type Step = 'purchase' | 'production' | 'shipping' | 'receipt';
 type Po = { id:string; po_number:string; status:string; supplier_partner_id:string; supplier_name:string; currency:string; total_amount:string; created_at:string };
 type PoLine = { id:string; purchase_order_id:string; item_type:string; sku_id:string|null; sku:string|null; ordered_quantity:string; unit_price:string; requested_date:string|null; line_kind:string };
-type Partner = { id:string; displayName:string; roles:string[] };
+type Partner = { id:string; displayName:string; roles:string[]; status?:string };
 type BuildSpec = { id:string; sku_id:string; code:string; status:string };
 type Sku = { id:string; sku:string; name:string };
 type ProductionOrder = { id:string; source_purchase_order_id:string|null; production_order_number:string; build_spec_id:string; factory_partner_id:string; factory_name:string; planned_quantity:number; planned_completion_date:string|null; status:string };
@@ -122,7 +122,7 @@ export function ProductionDeliveryWorkspace(){
   const ordered=poLines.filter(l=>l.line_kind!=='GIFT').reduce((sum,l)=>sum+n(l.ordered_quantity),0);
   const produced=productionOrders.filter(p=>p.status==='COMPLETED').reduce((sum,p)=>sum+n(p.planned_quantity),0);
   const selectedStep:Step=selected?stepById[selected.id]??'purchase':'purchase';
-  const factoryPartners=facts.partners.filter(p=>p.roles?.includes('FACTORY'));
+  const factoryPartners=facts.partners.filter(p=>p.roles?.includes('FACTORY') && p.status !== 'INACTIVE');
   const purchaseSkus=facts.catalog.skus;
   const linkedBatches=facts.finance.landedBatches.filter(b=>shipmentIds.has(b.shipment_id));
   const linkedCosts=facts.finance.landedComponents.filter(c=>linkedBatches.some(b=>b.id===c.batch_id));
@@ -238,7 +238,7 @@ export function ProductionDeliveryWorkspace(){
     {showCreate?<form className={styles.panel} onSubmit={submitPo}>
       <h2>新建生产采购单</h2>
       <div className={styles.fields}>
-        <label>工厂<select name="factory" required defaultValue=""><option value="">选择工厂</option>{factoryPartners.map(p=><option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
+        <label>工厂 <a href="/admin/supply/partners" style={{marginLeft:8,fontSize:12}}>+ 新建工厂</a><select name="factory" required defaultValue=""><option value="">{factoryPartners.length ? "选择工厂" : "暂无工厂，请先新建"}</option>{factoryPartners.map(p=><option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
         <label>商品 SKU<select name="sku" required defaultValue=""><option value="">选择已建商品</option>{purchaseSkus.map(s=><option key={s.id} value={s.id}>{s.sku} · {s.name}</option>)}</select></label>
         <label>采购数量<input name="quantity" type="number" min="1" step="1" required/></label>
         <label>单台采购价<input name="price" type="number" min="0" step="0.01" required/></label>
