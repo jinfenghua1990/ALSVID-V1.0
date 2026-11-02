@@ -105,6 +105,7 @@ test('retired Shopify runtime cannot accept or replay orders or create new chann
 });
 
 
+
 test('local gateway forwards every Next.js BFF API route to Web and preserves NestJS API', () => {
   const gateway = read('infra/gateway/nginx.conf');
   const routeDirectories = readdirSync(join(root, 'apps/web/app/api'), { withFileTypes: true })
@@ -112,9 +113,10 @@ test('local gateway forwards every Next.js BFF API route to Web and preserves Ne
     .map(entry => entry.name);
   assert.deepEqual(routeDirectories.sort(), ['admin', 'control', 'partners', 'public', 'session', 'settings']);
   for (const prefix of routeDirectories) {
-    const block = gateway.match(new RegExp(`location \\^~ /api/${prefix}/ \\{([\\s\\S]*?)\\n  \\}`));
-    assert.ok(block, `Missing Next.js gateway route for /api/${prefix}/`);
-    assert.match(block[1], /proxy_pass \\$web_upstream;/, `Wrong target for Next.js /api/${prefix}/`);
+    const block = gateway.split('location ^~ /api/' + prefix + '/ {')[1]?.split('\n  }')[0];
+    assert.ok(block, 'Missing Next.js gateway route for /api/' + prefix + '/');
+    assert.ok(block.includes('proxy_pass $web_upstream;'), 'Wrong target for Next.js /api/' + prefix + '/');
   }
-  assert.match(gateway, /location \\/api\\/ \\{\\s*proxy_pass \\$api_upstream;/, 'NestJS /api/v1/* must still use the API upstream');
+  assert.ok(gateway.includes('location /api/ {\n    proxy_pass $api_upstream;'),
+    'NestJS /api/v1/* must still use the API upstream');
 });
