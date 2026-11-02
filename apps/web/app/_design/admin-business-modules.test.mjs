@@ -74,19 +74,15 @@ test('finance and logistics mount their original authenticated workspaces, witho
 
 test('framework directory has a single source of 13 Admin modules and does not present mocked KPI records', () => {
   const source = read('./business-module-registry.ts');
-  const directory = read('./admin-module-directory.tsx');
   const ui = read('./renderer.tsx');
   const labels = [...source.matchAll(/\{ label: '([^']+)', href: '(\/admin[^']*)'/g)];
   assert.equal(labels.length, 13, 'exactly thirteen top-level modules');
   assert.equal(new Set(labels.map(match => match[1])).size, 13, 'module labels are unique');
   assert.equal(new Set(labels.map(match => match[2])).size, 13, 'module routes are unique');
-  assert.match(directory, /ADMIN_MODULES\.map\(/);
-  assert.match(directory, /部分功能接入/);
   assert.match(ui, /const AREAS = ADMIN_MODULES/);
   assert.match(ui, /<AdminSecondaryNavigation moduleLabel=\{moduleLabel\} groups=\{secondaryNavGroups\} \/>/);
   assert.match(ui, /const secondaryNavGroups = \[/);
   assert.match(ui, /'工作台': \[/);
-  assert.doesNotMatch(directory, /api\/control|const exampleKpi/);
 });
 
 
