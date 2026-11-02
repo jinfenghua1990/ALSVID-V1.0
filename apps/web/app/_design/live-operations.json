@@ -8,7 +8,7 @@
       "path": "/v1/commerce",
       "field": "orders",
       "href": "/commerce",
-      "help": "ALSVID 已接收的渠道订单事实；并非 Shopify 全部订单"
+      "help": "ALSVID 已接收的外部渠道订单事实，并非任何外部平台的完整订单"
     },
     {
       "key": "production",
