@@ -56,6 +56,7 @@ export const ADMIN_SECONDARY_NAVIGATION: Readonly<Record<string, readonly AdminS
     group('生产制造', [
       ['生产工作台', '/admin/production'],
       ['生产订单', '/admin/production#work-orders'],
+      ['BOM / 生产用料清单', '/admin/production#production-bom'],
       ['装配与质检', '/admin/production#quality'],
       ['车辆档案', '/admin/production/vin'],
     ]),

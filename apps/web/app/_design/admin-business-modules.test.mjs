@@ -29,7 +29,7 @@ test('one primary navigation maps old areas to new business destinations without
   assert.ok(!registry.includes("label: '订单管理'"), 'mixed B2B/B2C order hub is not a primary module');
   assert.match(ui, /const AREAS = ADMIN_MODULES/);
   assert.match(ui, /legacyAreas\.includes\(area\)/);
-  assert.match(ui, /商城促销与支付配置|营销活动（待接入）|营销运营（后续开发）/);
+  assert.match(read('./admin-navigation.ts'), /营销运营（后续开发）|支付配置（后续开发）/);
 });
 
 test('ecommerce has a dedicated workbench and distinct real workflow routes', () => {

@@ -72,6 +72,7 @@ test('product, inventory, production and procurement deep links retain their rea
     ['零配件', '/admin/product?type=PARTS#parts'],
     ['商城装修', '/admin/ecommerce/page-builder'],
     ['生产订单', '/admin/production#work-orders'],
+    ['BOM / 生产用料清单', '/admin/production#production-bom'],
     ['采购订单', '/admin/supply#purchasing'],
     ['仓库列表', '/admin/inventory#warehouses'],
     ['VIN查询', '/admin/production/vin-detail'],
