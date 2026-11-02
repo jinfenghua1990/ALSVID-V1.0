@@ -1,7 +1,7 @@
 'use client';
 
 import { AppShell } from '@alsvid/ui';
-import { navigationFor } from '../app-navigation';
+import { navigationFor } from '../_design/admin-navigation';
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';

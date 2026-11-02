@@ -43,13 +43,13 @@
 
 - `/admin/ecommerce` 作为电商工作台；`/admin/ecommerce/publications`、`/homepage`、`/inventory`、`/pricing`、`/orders` 分别承载商品发布、首页绑定、只读库存、价格版本和第一方 B2C 订单流程。它们复用既有 Product、Inventory 与 Commerce API，不复制商品、库存或订单事实。产品模块不再重复渲染电商发布表单，但保留产品 SKU 管理和跳转电商售价入口。
 - 新 `/admin/finance` 复用已有 FinanceClient 的领域 API / 表单，新 `/admin/logistics` 复用已有 LogisticsClient。
-- 旧 Admin 产品 / 订单 / 经销商 / 库存 / 供应链 / 售后路由保持有效。顶部导航按业务目的分类；Legacy AppShell 菜单也应保持名称一致。
+- 旧 Admin 产品 / 订单 / 经销商 / 库存 / 供应链 / 售后路由保持有效。顶部导航与受保护的旧书签工作区共用同一组 `/admin` 业务模块入口，不维护平行旧菜单。
 - **尚未交付**：真实 B2B 订单门户完整闭环、统一跨渠道订单搜索、优惠券、正式公开付款、第三方 WMS 连接。新 UI 只显示已实现入口，其余标注待接入。
 - 不修改生产数据库、订单归属或新建迁移；所有修改经 Draft PR 的 CI、浏览器预览、Review 后才能合并生产。不把设计示例数量当真实业务数据。
 
 ## 4. 实施与兼容注意
 
-旧 `/product`、`/commerce`、`/inventory`、`/logistics`、`/finance` 等已有受保护页面继续可访问。统一 Admin 导航实现位于 `apps/web/app/_design/renderer.tsx`；原业务 AppShell 导航在 `apps/web/app/app-navigation.ts`。二者应由统一模块定义逐步收敛，不再新增第三套导航。
+旧 `/product`、`/commerce`、`/inventory`、`/logistics`、`/finance` 等已有受保护页面继续可访问。统一导航配置位于 `apps/web/app/_design/admin-navigation.ts`，一级模块的权威源为 `business-module-registry.ts`。现役 Admin 与旧 AppShell 工作区均从同一份数据生成菜单；旧 `app-navigation.ts` 已删除。旧业务组件暂时保留，直到真实生产 UAT 完成。
 
 “订单管理”作为跨渠道查询与履约导航的独立一级入口；B2C 交易操作仍进入电商工作区，B2B 交易进入经销商/B2B 工作区。订单数据模型不因导航拆分而改变，任何页面都不得复制或并行编辑同一订单事实。
 
@@ -87,19 +87,16 @@
 本次 PR 只包含代码级信息架构和已存在的业务组件复用；P0/P1/P2 表格为后续待办，不表示它们已实施。凡涉及真实付款、客户归属变更、供应商/经销商财务核销或可售库存，都需要独立业务规则和验收。
 
 
-## 8. 未完成二级入口的交互规则（2026-10-23）
+## 8. 未完成二级入口的交互规则（2026-11-02）
 
-- `apps/web/app/app-navigation.ts` 中仍标记为旧状态 `骨架` 的二级入口，在导出给 UI 前统一转换为 `disabled: true`、状态文案「建设中」。
-- 这些入口保留在导航中，便于用户了解规划范围，但不得跳转到相邻模块或空页面制造“功能已可用”的错觉。
-- 每个真实流程交付后，开发者应先实现并验收对应页面/API/权限/错误恢复，再移除该入口的建设中标记；测试同步核对未完成入口清单。
-- 当前旧导航自动测试锁定 26 条待建设入口（`app-navigation.test.mjs`）；这仅验证旧导航状态，不代表现役 `/admin` 功能验收，防止它们意外恢复可点击状态。后续每交付一个真实功能，应同步减少对应条目并更新测试预期。
-
-
+- `admin-navigation.ts` 是统一导航的二级路由配置，只有真实存在的 `/admin` 页面才有可点击 href；未接入项没有 href 并显示「待开发」。
+- 旧 AppShell 也使用此导航提供的 13 个一级入口，不再显示旧 /product、/commerce 等平行路径。历史受保护书签继续可访问，但不再拥有独立菜单定义。
+- 现役链接、业务锚点、未实现项禁用以及旧菜单退役均由 CI 回归测试守护；业务迁移和 UAT 另行完成。
 
 ## 9. 已退役的商城方案对比（2026-11-02 核验）
 
 旧「更多模块 → 商城方案对比」和 `/admin/commerce-lab` 实验入口已从现役 Admin 导航退役；历史说明仅保留供追溯，不能再把它当作当前可访问功能。见 [历史比较区说明](COMMERCE_COMPARISON_LAB_2026-10-26.md)。
 
-旧 AppShell 导航 `apps/web/app/app-navigation.ts` **仍被真实旧页面调用**：`OperationsFrame`、`/overview`、`/vehicle360`、`/partners` 等。不得按“仅测试引用”删除。现役 `/admin` 导航在 `apps/web/app/_design/renderer.tsx`。两套导航的真正收敛，需要将旧页面的业务功能迁移到 `/admin` 并完成生产 UAT 后逐页处理。
+旧 AppShell 的菜单配置已经统一到 `apps/web/app/_design/admin-navigation.ts`；原 `app-navigation.ts` 已删除。旧受保护业务页面仍可供历史书签访问，其业务组件通过 `/admin` 的集成工作区复用。页面本身是否退役，以实际业务 UAT 为准。
 
 2026-11-02 后续清理：已退役 `LiveWorkbenchTodos`、`P0OperationsCenter` 的页面组件不再渲染；其独立数据解析契约和旧组件专用测试也随之退出构建，现役业务 API 仍由专门的 Admin/API 测试检查。不能用删除演示看板替代业务操作闭环验收。

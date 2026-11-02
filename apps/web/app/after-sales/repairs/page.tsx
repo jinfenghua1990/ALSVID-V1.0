@@ -1,7 +1,7 @@
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../../_lib/portal-access';
 import { PortalSectionPage } from '../../_components/portal-section-page';
-import { navigationFor } from '../../app-navigation';
+import { navigationFor } from '../../_design/admin-navigation';
 
 const cards = [
   { eyebrow: '维修', title: '维修记录', description: '记录真实车辆的检测、维修动作、工时与处理结论。' },

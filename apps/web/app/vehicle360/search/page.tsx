@@ -1,7 +1,7 @@
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../../_lib/portal-access';
 import { PortalSectionPage } from '../../_components/portal-section-page';
-import { navigationFor } from '../../app-navigation';
+import { navigationFor } from '../../_design/admin-navigation';
 
 const cards = [
   { eyebrow: 'VIN', title: '车架号查询', description: '真实查询接口接入后，可按车架号定位车辆档案。' },

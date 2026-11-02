@@ -1,7 +1,7 @@
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../../_lib/portal-access';
 import { PortalSectionPage } from '../../_components/portal-section-page';
-import { navigationFor } from '../../app-navigation';
+import { navigationFor } from '../../_design/admin-navigation';
 
 const cards = [
   { eyebrow: '目录', title: '适配配件', description: '按真实车型与 BOM 关系展示可替换、可升级的配件。' },

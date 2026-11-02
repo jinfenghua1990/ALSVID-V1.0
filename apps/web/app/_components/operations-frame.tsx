@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { AppShell } from '@alsvid/ui';
-import { navigationFor } from '../app-navigation';
+import { navigationFor } from '../_design/admin-navigation';
 
 /**
  * Keep the proven domain-connected workspaces usable in their old routes while

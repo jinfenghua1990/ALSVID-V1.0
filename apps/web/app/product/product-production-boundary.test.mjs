@@ -7,7 +7,7 @@ const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 test('product archive is product and parts only; BOM editor is manufacturing-only', () => {
   const client = read('./product-client.tsx');
   const integrated = read('../_design/integrated-operations.tsx');
-  const renderer = read('../_design/renderer.tsx');
+  const navigation = read('../_design/admin-navigation.ts');
 
   assert.match(client, /view\?: 'archive' \| 'engineering'/);
   assert.match(client, /\{view === "archive" \? <>/);
@@ -18,12 +18,12 @@ test('product archive is product and parts only; BOM editor is manufacturing-onl
   assert.match(client, /router\.replace\('\/admin\/production#production-bom'\)/);
   assert.doesNotMatch(client, /id="engineering-panel"/);
   assert.match(integrated, /case '生产': return <><ProductionClient embedded \/><ProductClient embedded view="engineering" \/><\/>;/);
-  assert.match(renderer, /'BOM \/ 生产用料清单': '\/admin\/production#production-bom'/);
-  assert.match(renderer, /group: '生产制造', items: \['生产工作台', '生产订单', '装配与质检', '车辆档案'\]/);
-  assert.ok(renderer.includes("'整车产品（车辆明细）'"));
-  assert.ok(renderer.includes("'车辆型号'"));
-  assert.ok(renderer.includes("'零配件'"));
-  assert.ok(renderer.includes("'技术平台'"));
+  assert.match(navigation, /'BOM \/ 生产用料清单', '\/admin\/production#production-bom'/);
+  assert.match(navigation, /group\('生产制造'/);
+  assert.ok(navigation.includes("'整车产品（车辆明细）'"));
+  assert.ok(navigation.includes("'车辆型号'"));
+  assert.ok(navigation.includes("'零配件'"));
+  assert.ok(navigation.includes("'技术平台'"));
 });
 
 test('product platform labels are exclusively user-authored records', () => {

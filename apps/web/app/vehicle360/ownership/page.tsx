@@ -1,7 +1,7 @@
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../../_lib/portal-access';
 import { PortalSectionPage } from '../../_components/portal-section-page';
-import { navigationFor } from '../../app-navigation';
+import { navigationFor } from '../../_design/admin-navigation';
 
 const cards = [
   { eyebrow: '交付', title: '渠道交付', description: '记录车辆从 ALSVID 到经销商、再到最终客户的真实交付事实。' },

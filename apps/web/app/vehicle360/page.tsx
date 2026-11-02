@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../_lib/portal-access';
-import { navigationFor } from '../app-navigation';
+import { navigationFor } from '../_design/admin-navigation';
 import styles from './vehicle360.module.css';
 
 const steps = [
