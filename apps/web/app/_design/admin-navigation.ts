@@ -81,7 +81,7 @@ export const ADMIN_SECONDARY_NAVIGATION: Readonly<Record<string, readonly AdminS
       ['生产 / VIN 质检明细', '/admin/production'],
       ['出口物流 / 清关明细', '/admin/logistics'],
     ]),
-    group('主数据', [['仓库设置', '/admin/inventory/warehouses'], ['仓库库存', '/admin/inventory/stock']]),
+    group('主数据', [['供应商与工厂', '/admin/supply/partners'], ['仓库设置', '/admin/inventory/warehouses'], ['仓库库存', '/admin/inventory/stock']]),
   ],
   '客户': [
     group('客户与车主', [['客户列表', '/admin/customers'], ['车辆绑定（待接入）'], ['购买记录（待接入）']]),

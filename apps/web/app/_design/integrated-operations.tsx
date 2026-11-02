@@ -7,6 +7,7 @@ import ProductionClient from '../production/production-client';
 import InventoryClient from '../inventory/inventory-client';
 import DealersClient from '../dealers/dealers-client';
 import SupplyClient from '../supply/supply-client';
+import PartnersClient from '../partners/partners-client';
 import { ProductionDeliveryWorkspace } from './production-delivery-workspace';
 import { CustomerRecords, AccessAuditRecords } from './admin-records';
 import { ServiceCaseClient } from './service-cases';
@@ -33,7 +34,7 @@ export function IntegratedOperations({ area, route }: { area: string; route?: st
     case '生产': return <><ProductionClient embedded /><ProductClient embedded view="engineering" /></>;
     case '库存': return <InventoryClient embedded />;
     case '经销商': return <DealersClient embedded />;
-    case '供应链': return route === '/admin/supply/legacy' ? <SupplyClient embedded /> : <ProductionDeliveryWorkspace />;
+    case '供应链': return route === '/admin/supply/partners' ? <PartnersClient embedded scope="supply" /> : route === '/admin/supply/legacy' ? <SupplyClient embedded /> : <ProductionDeliveryWorkspace />;
     case '客户': return <CustomerRecords />;
     case '设置': return <><AccessAuditRecords /><PortalBindingsAdmin /></>;
     case '售后': return <ServiceCaseClient />;
