@@ -46,7 +46,7 @@
       "area": "订单",
       "href": "/commerce",
       "label": "打开真实订单映射与异常工作台",
-      "detail": "管理已同步的外部订单事实、SKU 映射和异常；不在 Admin 创建 Shopify 商业订单。"
+      "detail": "管理已同步的外部订单事实、SKU 映射和异常；自建商城订单由 ALSVID Commerce 维护。"
     },
     {
       "area": "生产",
