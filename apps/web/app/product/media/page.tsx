@@ -11,5 +11,5 @@ const cards = [
 
 export default async function ProductMediaPage() {
   await requireInternalPreviewSession();
-  return <AppShell navigation={navigationFor('/product/media')} footer="ALSVID · 产品中心"><PortalSectionPage eyebrow="PRODUCT / MEDIA" title="图片 / 视频素材" description="素材中心页面已经就位。没有上传真实素材时保持空置。" cards={cards} /></AppShell>;
+  return <AppShell navigation={navigationFor('/product/media')} footer="ALSVID · 产品中心"><PortalSectionPage eyebrow="产品研发 / 素材" title="图片 / 视频素材" description="素材中心页面已经就位。没有上传真实素材时保持空置。" cards={cards} /></AppShell>;
 }

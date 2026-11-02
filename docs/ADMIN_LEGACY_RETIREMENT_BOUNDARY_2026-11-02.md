@@ -2,13 +2,16 @@
 
 本清单以 `main` 的实际业务引用为准，不把历史设计演示、GitHub 合并或 CI 通过等同于生产业务验收。
 
-## 本轮已核对
+## 当前已核对（2026-11-03，主干 46d7da53）
 
-- `apps/web/app/app-navigation.ts` 的 `navigationFor()` 正被 `apps/web/app/_components/operations-frame.tsx`、`apps/web/app/overview/page.tsx`、`apps/web/app/vehicle360/page.tsx`、`apps/web/app/partners/partners-client.tsx` 等页面/组件调用。**不可删除**。
-- `apps/web/app/_design/renderer.tsx` 的 `menuDestination()` 正在构建现役 Admin 二级菜单地址；不是死映射。**不可直接整段移除**。
-- `apps/web/app/admin/[...designPath]/page.tsx` 的旧深链兼容转跳仍被回归测试保护；改为 404 或显式提示前，需评估书签影响。
-- 旧 `/product`、`/commerce`、`/supply`、`/inventory`、`/production` 等路由承载或导航到真实业务 UI，现阶段保留；不要按另一路由目录结构整批删除。
-- `apps/web/app/_design/live-workbench-todos-contract.ts` 和 `p0-operations-contract.ts` 的唯一生产引用来自已在 PR #461 删除的两个演示组件，剩余引用只有各自的旧测试；本轮连同专属测试删除。真实 API 的存在性断言迁入现役 Admin 测试。
+- 旧 `apps/web/app/app-navigation.ts` **已删除**，当前公共旧路径通过 `apps/web/app/_design/admin-navigation.ts` 读取单一 Admin 导航规范。旧文档中“仍在调用 app-navigation.ts”是历史记录，不能再作为现况。
+- `apps/web/app/_components/portal-shell.tsx` 仍被 **dealer / supplier** 门户实际调用，组件不可整体删除；但 `admin` 分支、独立导航及激活判断没有实际渲染入口，本次移除以防重复菜单复活。
+- `apps/web/app/_design/integrated-operations.tsx` 的 `/admin/supply/legacy` 仍映射真实供应链旧工作台；必须按业务功能和深链验收后才能退役。
+- `apps/web/app/_experiments/commerce-lab` 的剩余读模块仍被 `shop-preview` 实际页面引用，不能按目录名全删；其退役边界需要先迁移真实调用方。
+- `/product/media` 仍是**占位的图片/视频页面**，由旧门户导航入口使用；它不是可上传、可归档、可追溯素材的生产素材中心，不可在报表中认定已完成。
+- 现有商城装修器的商品插入属于草稿/预览，不等于 WWW 发布；商品详情装修的完整发布闭环也尚未完成。
+- 历史 UUID 迁移继续按数字 ID 主键的批次进行，**已合并迁移 SQL ≠ 已在生产执行或完成所有代码/API 转换**；未验证完所有历史关联前不可删除兼容字段。
+- `apps/web/app/admin/[...designPath]/page.tsx` 的旧深链兼容跳转及真实业务入口仍被测试保护；旧书签/数据迁移前保留。
 
 ## 旧页面逐步退役必须满足的条件
 
