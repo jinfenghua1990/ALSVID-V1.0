@@ -94,6 +94,7 @@ export function ProductionDeliveryWorkspace(){
     const ready:string[]=[];
     values.forEach((result,index)=>{
       const key=keys[index];
+      if(!key)return;
       if(result.status==='fulfilled' && result.value!==null){
         (next as unknown as Record<string,unknown>)[key]=result.value;
         ready.push(key);
@@ -208,6 +209,8 @@ export function ProductionDeliveryWorkspace(){
     if(!batch||batch.status!=='DRAFT'||!Number.isFinite(c)||c<0){setMessage('费用批次无效或金额不正确');return;}
     const cargo=shipmentCargo.filter(x=>x.shipment_id===batch.shipment_id);
     if(cargo.length!==1){setMessage('当前批次包含多个 SKU 或未分配货物，请先在物流中分配，并到财务模块核对分摊');return;}
+    const targetCargo=cargo[0];
+    if(!targetCargo){setMessage('关联货物不存在');return;}
     void run(async()=>{
       const added=await api<{id:string}>(`/v1/finance/landed-cost/${batchId}/components`,{method:'POST',body:JSON.stringify({
         category:form.get('category'),currency:batch.currency,amount:c,batchCurrencyAmount:c,
@@ -215,7 +218,7 @@ export function ProductionDeliveryWorkspace(){
       })});
       if(!added?.id)throw new Error('费用已提交但回执不完整，请刷新核对，勿重复录入');
       await api(`/v1/finance/landed-cost/components/${added.id}/allocations`,{method:'POST',body:JSON.stringify({
-        cargoId:cargo[0].id,allocatedAmount:c,basisValue:n(cargo[0].quantity),
+        cargoId:targetCargo.id,allocatedAmount:c,basisValue:n(targetCargo.quantity),
       })});
     },'实际费用已记录并分摊到对应货物。');
   }
