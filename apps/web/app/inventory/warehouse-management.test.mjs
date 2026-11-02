@@ -21,3 +21,16 @@ test('create and edit use real protected Warehouse API, with no silent stock ins
   assert.match(api,/@Patch\('warehouses\/:id'\)/);
   assert.doesNotMatch(source,/\/v1\/inventory\/movements/);
 });
+
+test('delete opens a second explicit confirmation and never deletes from a table click',()=>{
+  assert.match(source,/openDelete\(w\)/);
+  assert.match(source,/aria-label="二次确认删除仓库"/);
+  assert.match(source,/confirmationCode\.trim\(\)!==deleting\.code/);
+  assert.match(source,/,'DELETE',\{expectedCode:deleting\.code\}/);
+  assert.match(source,/库存预留/);
+  assert.match(api,/@Delete\('warehouses\/:id'\)/);
+});
+test('admin warehouse interface uses Chinese labels, while public locales are unchanged',()=>{
+  assert.match(source,/库存管理 \/ 仓库档案/);
+  assert.doesNotMatch(source,/>INVENTORY \/ WAREHOUSE</);
+});

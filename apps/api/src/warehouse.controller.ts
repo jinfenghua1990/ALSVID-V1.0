@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
 import type { AuthenticatedRequest } from './auth.guard.js';
 import { requireAuth } from './auth.guard.js';
 import { warehouseService } from './runtime.js';
 
 interface CreateWarehouseBody { code: string; name: string; partnerId?: string; countryCode: string; timezone?: string }
 interface UpdateWarehouseBody { name: string; timezone: string; expectedName: string; expectedTimezone: string }
+interface DeleteWarehouseBody { expectedCode: string }
 interface CreateLocationBody { warehouseId: string; parentLocationId?: string; code: string; name: string; locationType: string }
 interface OpenStocktakeBody { warehouseId: string; note?: string }
 interface RecordCountBody { locationId: string; itemKind: 'PART' | 'SKU' | 'VEHICLE'; itemId: string; countedQuantity: string | number; unit: string }
@@ -24,6 +25,11 @@ export class WarehouseController {
   @Patch('warehouses/:id')
   async updateWarehouse(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() input: UpdateWarehouseBody) {
     return { data: await warehouseService.updateWarehouse(requireAuth(request), id, input) };
+  }
+
+  @Delete('warehouses/:id')
+  async deleteWarehouse(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() input: DeleteWarehouseBody) {
+    return { data: await warehouseService.deleteWarehouse(requireAuth(request), id, input) };
   }
 
   @Post('locations')
