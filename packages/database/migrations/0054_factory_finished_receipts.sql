@@ -1,7 +1,7 @@
 -- Factory completion does NOT automatically manufacture sellable stock.
 -- Real factory warehouse count creates a protected inventory receipt.
 CREATE TABLE production.factory_finished_receipts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   production_order_id uuid NOT NULL REFERENCES production.production_orders(id) ON DELETE RESTRICT,
   location_id uuid NOT NULL REFERENCES warehouse.locations(id) ON DELETE RESTRICT,
   inventory_movement_id uuid NOT NULL UNIQUE REFERENCES inventory.movements(id) ON DELETE RESTRICT,
