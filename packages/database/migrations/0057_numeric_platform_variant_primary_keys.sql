@@ -15,7 +15,7 @@ BEGIN
  THEN
    RAISE EXCEPTION 'Unexpected Product numeric-key state: canceling platform/variant cutover';
  END IF;
-END; $;
+END; $$;
 
 -- Save the original validated FK definitions before dropping UUID PKs.
 CREATE TEMP TABLE alsvid_platform_variant_uuid_fks ON COMMIT DROP AS
@@ -47,7 +47,7 @@ BEGIN
  FOR fk IN SELECT * FROM alsvid_platform_variant_uuid_fks LOOP
    EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I',fk.child_table,fk.constraint_name);
  END LOOP;
-END; $;
+END; $$;
 
 ALTER TABLE product.platforms DROP CONSTRAINT platforms_pkey;
 ALTER TABLE product.platforms ADD CONSTRAINT platforms_pkey PRIMARY KEY(platform_number);
@@ -61,29 +61,29 @@ BEGIN
    EXECUTE format('ALTER TABLE %s ADD CONSTRAINT %I %s',
                   fk.child_table,fk.constraint_name,fk.definition);
  END LOOP;
-END; $;
+END; $$;
 
 -- These canonical identifiers are immutable even when no child record yet exists.
 CREATE OR REPLACE FUNCTION product.reject_platform_number_mutation()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
  IF NEW.platform_number IS DISTINCT FROM OLD.platform_number THEN
    RAISE EXCEPTION 'Platform number is immutable';
  END IF;
  RETURN NEW;
-END $;
+END; $$;
 CREATE TRIGGER product_platform_number_immutable
 BEFORE UPDATE ON product.platforms
 FOR EACH ROW EXECUTE FUNCTION product.reject_platform_number_mutation();
 
 CREATE OR REPLACE FUNCTION product.reject_variant_number_mutation()
-RETURNS trigger LANGUAGE plpgsql AS $
+RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
  IF NEW.variant_number IS DISTINCT FROM OLD.variant_number THEN
    RAISE EXCEPTION 'Variant number is immutable';
  END IF;
  RETURN NEW;
-END $;
+END; $$;
 CREATE TRIGGER product_variant_number_immutable
 BEFORE UPDATE ON product.variants
 FOR EACH ROW EXECUTE FUNCTION product.reject_variant_number_mutation();
@@ -117,7 +117,7 @@ BEGIN
      USING ERRCODE='23503';
  END IF;
  RETURN NEW;
-END; $;
+END; $$;
 CREATE TRIGGER product_models_sync_platform_number
 BEFORE INSERT OR UPDATE ON product.models
 FOR EACH ROW EXECUTE FUNCTION product.sync_model_platform_number();
@@ -132,7 +132,7 @@ BEGIN
      USING ERRCODE='23503';
  END IF;
  RETURN NEW;
-END; $;
+END; $$;
 CREATE TRIGGER product_skus_sync_variant_number
 BEFORE INSERT OR UPDATE ON product.skus
 FOR EACH ROW EXECUTE FUNCTION product.sync_sku_variant_number();
@@ -162,4 +162,4 @@ BEGIN
  ) THEN
    RAISE EXCEPTION 'Product platform/variant numeric PK and reference consistency check failed';
  END IF;
-END; $;
+END; $$;
