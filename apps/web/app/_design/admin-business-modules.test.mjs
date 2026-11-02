@@ -23,7 +23,7 @@ test('business modules expose guarded canonical Admin routes and retain old orde
 test('one primary navigation maps old areas to new business destinations without second data stores', () => {
   const ui = read('./renderer.tsx');
   const registry = read('./business-module-registry.ts');
-  for (const href of ['/admin/product', '/admin/ecommerce', '/admin/dealers', '/admin/production', '/admin/inventory', '/admin/supply', '/admin/customers', '/admin/after-sales', '/admin/finance', '/admin/analytics', '/admin/settings']) {
+  for (const href of ['/admin/product', '/admin/ecommerce', '/admin/dealers', '/admin/inventory', '/admin/supply', '/admin/customers', '/admin/after-sales', '/admin/finance', '/admin/analytics', '/admin/settings']) {
     assert.ok(registry.includes("href: '" + href + "'"), href);
   }
   assert.ok(!registry.includes("label: '订单管理'"), 'mixed B2B/B2C order hub is not a primary module');
@@ -72,13 +72,13 @@ test('finance and logistics mount their original authenticated workspaces, witho
   assert.ok(existsSync(new URL('../logistics/page.tsx', import.meta.url)));
 });
 
-test('framework directory has a single source of 13 Admin modules and does not present mocked KPI records', () => {
+test('framework directory has a single source of 11 Admin modules and does not present mocked KPI records', () => {
   const source = read('./business-module-registry.ts');
   const ui = read('./renderer.tsx');
   const labels = [...source.matchAll(/\{ label: '([^']+)', href: '(\/admin[^']*)'/g)];
-  assert.equal(labels.length, 13, 'exactly thirteen top-level modules');
-  assert.equal(new Set(labels.map(match => match[1])).size, 13, 'module labels are unique');
-  assert.equal(new Set(labels.map(match => match[2])).size, 13, 'module routes are unique');
+  assert.equal(labels.length, 11, 'exactly eleven top-level modules');
+  assert.equal(new Set(labels.map(match => match[1])).size, 11, 'module labels are unique');
+  assert.equal(new Set(labels.map(match => match[2])).size, 11, 'module routes are unique');
   assert.match(ui, /const AREAS = ADMIN_MODULES/);
   assert.match(ui, /<AdminSecondaryNavigation moduleLabel=\{moduleLabel\} groups=\{secondaryNavGroups\} \/>/);
   assert.match(ui, /const secondaryNavGroups = \[/);
@@ -142,8 +142,8 @@ test('all business modules are directly visible and the comparison module is rem
   const registry = read('./business-module-registry.ts');
   const styles = read('./design-system.css');
   const labels = [...registry.matchAll(/\{ label: '([^']+)', href: '(\/admin[^']*)'/g)];
-  assert.equal(labels.length, 13);
-  for (const label of ['商城运营', '库存管理', '跨境物流', '经销商管理', '采购管理', '客户与车主', '财务管理', '经营分析']) {
+  assert.equal(labels.length, 11);
+  for (const label of ['商城运营', '库存管理', '供应链管理', '经销商管理', '客户与车主', '财务管理', '经营分析']) {
     assert.ok(labels.some(match => match[1] === label), label);
   }
   assert.ok(!labels.some(match => match[1] === '商城方案对比'));

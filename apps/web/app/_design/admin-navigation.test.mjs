@@ -25,20 +25,20 @@ runInNewContext(outputText, {
 });
 const { navigationFor, ADMIN_SECONDARY_NAVIGATION } = mod.exports;
 
-test('every internal shell exposes the same 13 canonical Admin modules', () => {
-  assert.equal(modules.length, 13);
+test('every internal shell exposes the same 11 canonical Admin modules', () => {
+  assert.equal(modules.length, 11);
   for (const oldPath of ['/product', '/commerce', '/production', '/inventory', '/supply',
     '/finance', '/dealers', '/overview', '/vehicle360', '/settings/integrations',
     '/after-sales', '/partners', '/people/employees']) {
     const menu = navigationFor(oldPath);
-    assert.equal(menu.length, 13);
+    assert.equal(menu.length, 11);
     assert.ok(menu.every(item => item.href.startsWith('/admin')));
     assert.equal(menu.filter(item => item.active).length, 1, oldPath);
   }
   for (const [oldPath, livePath] of [
     ['/product', '/admin/product'], ['/commerce', '/admin/ecommerce'],
     ['/overview', '/admin/analytics'], ['/settings/integrations', '/admin/settings'],
-    ['/production', '/admin/production'], ['/vehicle360', '/admin/production'],
+    ['/production', '/admin/supply'], ['/vehicle360', '/admin/supply'],
   ]) assert.ok(navigationFor(oldPath).some(item => item.active && item.href === livePath), oldPath);
 });
 
@@ -73,7 +73,7 @@ test('product, inventory, production and procurement deep links retain their rea
     ['商城装修', '/admin/ecommerce/page-builder'],
     ['生产订单', '/admin/production#work-orders'],
     ['BOM / 生产用料清单', '/admin/production#production-bom'],
-    ['采购订单', '/admin/supply#purchasing'],
+    ['生产交付总单', '/admin/supply'],
     ['仓库设置', '/admin/inventory/warehouses'],
     ['仓库库存', '/admin/inventory/stock'],
     ['VIN查询', '/admin/production/vin-detail'],

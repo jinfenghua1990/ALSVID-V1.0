@@ -75,13 +75,13 @@ export const ADMIN_SECONDARY_NAVIGATION: Readonly<Record<string, readonly AdminS
     group('出口与跨境交付', [['出口物流与清关', '/admin/logistics']]),
   ],
   '供应链': [
-    group('采购业务', [
-      ['采购订单', '/admin/supply#purchasing'],
-      ['采购报价', '/admin/supply#quotations'],
-      ['收货记录', '/admin/supply#receipts'],
+    group('生产交付', [
+      ['生产交付总单', '/admin/supply'],
+      ['原采购工作台', '/admin/supply/legacy'],
+      ['生产 / VIN 质检明细', '/admin/production'],
+      ['出口物流 / 清关明细', '/admin/logistics'],
     ]),
-    group('供应商', [['供应商目录', '/admin/supply']]),
-    group('后续能力', [['采购申请（待接入）'], ['赠品采购（待接入）']]),
+    group('主数据', [['仓库设置', '/admin/inventory/warehouses'], ['仓库库存', '/admin/inventory/stock']]),
   ],
   '客户': [
     group('客户与车主', [['客户列表', '/admin/customers'], ['车辆绑定（待接入）'], ['购买记录（待接入）']]),

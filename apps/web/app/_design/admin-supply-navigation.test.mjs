@@ -4,33 +4,22 @@ import test from 'node:test';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-test('procurement sidebar targets the existing real workbench tabs', () => {
-  const ui = read('./admin-navigation.ts');
+test('production delivery is one workbench while legacy purchasing remains accessible', () => {
+  const navigation = read('./admin-navigation.ts');
+  const registry = read('./business-module-registry.ts');
+  const integrated = read('./integrated-operations.tsx');
+  const workspace = read('./production-delivery-workspace.tsx');
+  assert.match(navigation, /'生产交付总单', '\/admin\/supply'/);
+  assert.match(navigation, /'原采购工作台', '\/admin\/supply\/legacy'/);
+  assert.match(registry, /label: '供应链管理'/);
+  assert.match(registry, /legacyAreas: \['供应链','生产','物流'\]/);
+  assert.match(integrated, /<ProductionDeliveryWorkspace \/>/);
+  assert.match(integrated, /<SupplyClient embedded \/>/);
+  assert.match(workspace, /sourcePurchaseOrderId/);
+  assert.match(workspace, /production-delivery:opened/);
+  for (const name of ['采购信息','生产进度','发运与费用','仓库入库']) assert.ok(workspace.includes(name));
   const supply = read('../supply/supply-client.tsx');
-  const menuStart = ui.indexOf("  '供应链': [");
-  const menuEnd = ui.indexOf("  '客户': [", menuStart);
-  assert.ok(menuStart >= 0 && menuEnd > menuStart, 'procurement menu exists');
-  const menu = ui.slice(menuStart, menuEnd);
-
-  assert.match(menu, /采购订单[\s\S]*采购报价[\s\S]*收货记录/);
-  assert.match(menu, /供应商目录/);
-  assert.match(menu, /采购申请（待接入）/);
-  assert.match(menu, /赠品采购（待接入）/);
-  assert.doesNotMatch(menu, /\['采购申请', '\/admin/);
-  for (const [label, route] of [
-    ['采购订单', '/admin/supply#purchasing'],
-    ['采购报价', '/admin/supply#quotations'],
-    ['收货记录', '/admin/supply#receipts'],
-    ['供应商目录', '/admin/supply'],
-  ]) {
-    assert.ok(ui.includes("['" + label + "', '" + route + "']"), label + ' must open real procurement view');
-  }
   assert.match(supply, /type SupplyView = 'suppliers' \| 'quotations' \| 'orders' \| 'receipts'/);
-  assert.match(supply, /const anchor = hash\.replace/);
-  assert.match(supply, /if \(anchor === 'purchasing'\) return 'orders'/);
-  assert.match(supply, /onHashChange\(\); \/\/ Also resolve an initial/);
-  assert.match(supply, /useState<SupplyView>\('suppliers'\)/);
-  assert.match(supply, /<h1>采购管理<\/h1>/);
 });
 
 test('parts menu opens the actual user-maintained parts registry', () => {
