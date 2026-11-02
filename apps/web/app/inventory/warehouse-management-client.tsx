@@ -190,7 +190,7 @@ export default function WarehouseManagement({view}:{view:View}){
         <div className={styles.dialogHead}><div><h2>二次确认删除仓库</h2><p>删除不可撤销，请仔细核对仓库信息。</p></div>
           <button type="button" className={styles.iconButton} disabled={busy} aria-label="关闭" onClick={()=>setDeleting(null)}>×</button></div>
         <p className={styles.deleteTarget}>仓库编号：<strong>{deleting.code}</strong><span>仓库名称：{deleting.name}</span></p>
-        <p className={styles.deleteWarning}>如存在库存、预留、出入库历史、盘点或第三方仓映射，系统禁止删除。删除空仓不会清空任何库存。</p>
+        <p className={styles.deleteWarning}>如存在库存、库存预留、出入库历史、盘点或第三方仓映射，系统禁止删除。删除空仓不会清空任何库存。</p>
         <label>请再次输入仓库编号 {deleting.code} 以确认
           <input aria-label="再次输入仓库编号" autoFocus autoComplete="off" value={confirmationCode}
             onChange={e=>setConfirmationCode(e.target.value.toUpperCase())} placeholder="输入完整仓库编号" disabled={busy}/>
