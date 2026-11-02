@@ -169,3 +169,29 @@ test('customs evidence enforces EORI ownership and becomes immutable after decla
     await assert.rejects(db.query(`UPDATE logistics.shipment_events SET note='mutated' WHERE shipment_id=$1`,[shipment.id]),/append-only/);
   }finally{await db.close();}
 });
+
+test('a short overseas warehouse receipt only stocks signed quantities and can finish later', {skip:!hasDatabase}, async()=>{
+  const db=new Database();
+  try{
+    const auth=await actor(db),inventory=createInventoryService(db,audit),logistics=createLogisticsService(db,audit,inventory);
+    const cn=await location(db,auth.userId,'CN','CNS'),de=await location(db,auth.userId,'DE','DES'),skuId=await sku(db);
+    await inventory.postMovement(auth,{movementType:'RECEIPT',itemKind:'SKU',itemId:skuId,unit:'EA',quantity:'3',destinationLocationId:cn.locationId,idempotencyKey:`partial-seed-${suffix()}`});
+    const shipment=await logistics.createShipment(auth,{routeType:'FACTORY_TO_GERMANY_WAREHOUSE',originLocationId:cn.locationId,destinationLocationId:de.locationId});
+    const cargo=await logistics.allocateCargo(auth,shipment.id,{itemKind:'SKU',itemId:skuId,quantity:'3'});
+    await logistics.releaseShipment(auth,shipment.id);await logistics.dispatchShipment(auth,shipment.id);
+    await logistics.addMilestone(auth,shipment.id,{eventType:'DEPARTED'});
+    await logistics.addMilestone(auth,shipment.id,{eventType:'DELIVERED_GERMANY_WAREHOUSE'});
+    const part=await logistics.receiveWarehouseShipment(auth,shipment.id,{lines:[{cargoId:cargo.id,quantity:1}],note:'Actual warehouse signature for one bike'});
+    assert.equal(part.completed,false);
+    assert.equal(Number(await inventory.balanceAt({itemKind:'SKU',itemId:skuId,unit:'EA',locationId:de.locationId})),1);
+    const marker=await db.query<{inventory_received_at:string|null}>(`SELECT inventory_received_at FROM logistics.shipments WHERE id=$1`,[shipment.id]);
+    assert.equal(marker.rows[0]!.inventory_received_at,null);
+    await assert.rejects(logistics.receiveWarehouseShipment(auth,shipment.id,{lines:[{cargoId:cargo.id,quantity:3}]}),/exceeds pending cargo/);
+    const remainder=await logistics.receiveWarehouseShipment(auth,shipment.id,{lines:[{cargoId:cargo.id,quantity:2}]});
+    assert.equal(remainder.completed,true);
+    assert.equal(Number(await inventory.balanceAt({itemKind:'SKU',itemId:skuId,unit:'EA',locationId:de.locationId})),3);
+    const evidence=await db.query<{received:string;count:number}>(`SELECT sum(received_quantity)::text AS received,count(*)::int AS count FROM logistics.receiving_handoffs WHERE shipment_id=$1`,[shipment.id]);
+    assert.equal(Number(evidence.rows[0]!.received),3);assert.equal(evidence.rows[0]!.count,2);
+    await assert.rejects(logistics.receiveWarehouseShipment(auth,shipment.id,{lines:[{cargoId:cargo.id,quantity:1}]}),LogisticsConflictError);
+  }finally{await db.close();}
+});
