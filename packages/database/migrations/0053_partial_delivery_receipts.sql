@@ -11,7 +11,7 @@ CREATE INDEX receiving_handoffs_cargo_idx ON logistics.receiving_handoffs(cargo_
 CREATE OR REPLACE FUNCTION logistics.validate_receiving_handoff() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE route text; destination uuid; cargo_shipment uuid; cargo_qty numeric;
         cargo_kind text; existing_qty numeric; movement_qty numeric; movement_dest uuid;
-        movement_type text; movement_reference_type text; movement_reference_id uuid;
+        receipt_move_type text; movement_reference_type text; movement_reference_id uuid;
 BEGIN
   SELECT route_type,destination_location_id INTO route,destination
     FROM logistics.shipments WHERE id=NEW.shipment_id;
@@ -33,10 +33,10 @@ BEGIN
     RAISE EXCEPTION 'Received quantity must be positive and cannot exceed shipment cargo quantity';
   END IF;
   SELECT quantity,destination_location_id,movement_type,reference_type,reference_id
-    INTO movement_qty,movement_dest,movement_type,movement_reference_type,movement_reference_id
+    INTO movement_qty,movement_dest,receipt_move_type,movement_reference_type,movement_reference_id
     FROM inventory.movements WHERE id=NEW.inventory_movement_id;
   IF movement_dest IS DISTINCT FROM NEW.destination_location_id
-    OR movement_type IS DISTINCT FROM 'RECEIPT'
+    OR receipt_move_type IS DISTINCT FROM 'RECEIPT'
     OR movement_qty IS DISTINCT FROM NEW.received_quantity
     OR movement_reference_type IS DISTINCT FROM 'SHIPMENT'
     OR movement_reference_id IS DISTINCT FROM NEW.shipment_id THEN
