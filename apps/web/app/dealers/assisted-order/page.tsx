@@ -11,5 +11,5 @@ const cards = [
 
 export default async function AssistedOrderPage() {
   await requireInternalPreviewSession();
-  return <AppShell navigation={navigationFor('/dealers/assisted-order')} footer="ALSVID · 经销商"><PortalSectionPage eyebrow="DEALER / ASSISTED ORDER" title="业务员代下单" description="代下单操作界面已经就位；在 Shopify / B2B API 接入前不提供本地假订单。" notice="ALSVID 只作为业务工作台和事实记录层，购物车、价格计算、支付与正式订单仍由授权 Commerce 系统负责。" cards={cards} /></AppShell>;
+  return <AppShell navigation={navigationFor('/dealers/assisted-order')} footer="ALSVID · 经销商"><PortalSectionPage eyebrow="DEALER / ASSISTED ORDER" title="业务员代下单" description="代下单操作界面已经就位；在获批的 ALSVID Dealer/B2B API 完成并验收前不允许创建正式订单。" notice="ALSVID 只作为业务工作台和事实记录层，购物车、价格计算、支付与正式订单仍由授权 Commerce 系统负责。" cards={cards} /></AppShell>;
 }
