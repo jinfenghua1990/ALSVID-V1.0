@@ -98,8 +98,8 @@ try {
     process.exit(0);
   }
   if (command('git', ['branch', '--show-current']) !== 'main'
-    || command('git', ['status', '--porcelain', '--untracked-files=no']) !== '')
-    throw new Error('Local Production requires a clean main checkout, not a draft or uncommitted business code');
+    || command('git', ['status', '--porcelain', '--untracked-files=normal']) !== '')
+    throw new Error('Local Production requires a clean main checkout (including no untracked source files), not a draft or uncommitted business code');
   const sha = command('git', ['rev-parse', 'HEAD']);
   const env = config();
   const secured = {
