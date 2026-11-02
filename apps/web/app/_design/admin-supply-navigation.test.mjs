@@ -11,12 +11,15 @@ test('production delivery is one workbench while legacy purchasing remains acces
   const workspace = read('./production-delivery-workspace.tsx');
   assert.match(navigation, /'生产交付总单', '\/admin\/supply'/);
   assert.match(navigation, /'原采购工作台', '\/admin\/supply\/legacy'/);
+  assert.match(navigation, /'供应商与工厂', '\/admin\/supply\/partners'/);
   assert.match(registry, /label: '供应链管理'/);
   assert.match(registry, /legacyAreas: \['供应链','生产','物流'\]/);
   assert.match(integrated, /<ProductionDeliveryWorkspace \/>/);
+  assert.match(integrated, /<PartnersClient embedded scope="supply" \/>/);
   assert.match(integrated, /<SupplyClient embedded \/>/);
   assert.match(workspace, /sourcePurchaseOrderId/);
   assert.match(workspace, /production-delivery:opened/);
+  assert.match(workspace, /\/admin\/supply\/partners/);
   for (const name of ['采购信息','生产进度','发运与费用','仓库入库']) assert.ok(workspace.includes(name));
   const supply = read('../supply/supply-client.tsx');
   assert.match(supply, /type SupplyView = 'suppliers' \| 'quotations' \| 'orders' \| 'receipts'/);
