@@ -21,7 +21,7 @@ const model = (id, code, type, created) => ({ id, product_id: id === 'model-f8' 
 const catalog = {
   models: [model('model-f8', 'F8', 'BIKE', '2026-10-10T10:00:00Z'), model('model-x9', 'X9', 'ACCESSORY', '2026-10-20T10:00:00Z')],
   variants: [{ id: 'var-f8', model_id: 'model-f8', code: 'F8-STD', name: '标准', status: 'ACTIVE' }, { id: 'var-x9', model_id: 'model-x9', code: 'X9-STD', name: '标准', status: 'ACTIVE' }],
-  skus: [{ id: 'sku-f8', variant_id: 'var-f8', sku: 'F8-BLK', name: 'F8 黑色', status: 'ACTIVE', market_code: 'DE', color_code: 'BLACK', size_code: null }, { id: 'sku-x9', variant_id: 'var-x9', sku: 'X9-RED', name: 'X9 红色', status: 'ACTIVE', market_code: 'AT', color_code: 'RED', size_code: null }],
+  skus: [{ id: 'sku-f8', variant_id: 'var-f8', sku: 'F8-BLK', sku_number: '100001001', name: 'F8 黑色', status: 'ACTIVE', market_code: 'DE', color_code: 'BLACK', size_code: null }, { id: 'sku-x9', variant_id: 'var-x9', sku: 'X9-RED', sku_number: '100002001', name: 'X9 红色', status: 'ACTIVE', market_code: 'AT', color_code: 'RED', size_code: null }],
   platforms: [{ id: 'platform-1', code: 'FC', name: 'Folding Carbon' }],
 };
 let publications = [
@@ -71,8 +71,8 @@ try {
   await page.goto(base + '/admin/ecommerce/products');
   const list = page.getByRole('region', { name: '商城商品列表' });
   await list.getByText('F8 城市电单车').waitFor({ timeout: 30000 });
-  assert.equal(await list.getByText('数字商品 ID：100001').count(), 1, 'show numeric product ID');
-  assert.equal(await list.getByText('数字商品 ID：model-f8').count(), 0, 'do not show internal UUID as product ID');
+  assert.equal(await list.getByText('商品 ID：100001').count(), 1, 'show numeric product ID');
+  assert.equal(await list.getByText('商品 ID：model-f8').count(), 0, 'do not show internal UUID as product ID');
   await page.getByRole('navigation', { name: '工作区标签页' }).getByRole('link', { name: '商城商品列表' }).waitFor();
   assert.equal(await list.locator('table thead th').count(), 10);
   assert.equal(await list.getByRole('button', { name: '待审核 1' }).count(), 1);
@@ -93,7 +93,7 @@ try {
   await assertActionsInView();
   await page.setViewportSize({ width: 1440, height: 1000 });
 
-  await list.getByLabel('SKU 编码').fill('F8-BLK');
+  await list.getByLabel('SKU 数字编号').fill('100001001');
   await list.getByRole('button', { name: '查询', exact: true }).click();
   await list.getByText('F8 城市电单车').waitFor();
   assert.equal(await list.getByText('X9 零配件').count(), 0);
@@ -102,7 +102,7 @@ try {
   await list.getByRole('button', { name: '查询', exact: true }).click();
   assert.equal(await list.getByText('X9 零配件').count(), 0, 'product ID filter');
   await list.getByRole('button', { name: '重置' }).click();
-  await list.getByLabel('商品编码', { exact: true }).fill('X9');
+  await list.getByLabel('车型代号', { exact: true }).fill('X9');
   await list.getByRole('button', { name: '查询', exact: true }).click();
   assert.equal(await list.getByText('F8 城市电单车').count(), 0, 'product code filter');
   await list.getByRole('button', { name: '重置' }).click();
