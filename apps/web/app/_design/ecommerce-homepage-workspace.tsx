@@ -55,7 +55,7 @@ export function EcommerceHomepageWorkspace({ models, loadError }: { models: read
   if (state === 'error') return <section className="av-card av-commerce-load-state" role="alert"><strong>首页商品编排暂不可用</strong><p>{error}。读取失败不代表首页没有配置。</p><button className="av-btn" type="button" onClick={() => void load()}>重新读取</button></section>;
 
   return <div className="av-commerce-workspace" aria-label="首页商品编排工作区">
-    <section className="av-card av-commerce-dashboard-head"><div><p className="av-eyebrow">HOMEPAGE MERCHANDISING</p><h1 className="av-cardtitle">首页商品编排</h1><p>通过产品研发自动分配的六位数字商品 ID 选择真实车型，不创建第二套商品记录。</p></div><div className="av-pageactions"><button className="av-btn" type="button" onClick={() => void load()}>刷新</button><a className="av-btn" href="/admin/ecommerce/products">商城商品列表</a></div></section>
+    <section className="av-card av-commerce-dashboard-head"><div><p className="av-eyebrow">商城运营 / 首页商品编排</p><h1 className="av-cardtitle">首页商品编排</h1><p>通过产品研发自动分配的六位数字商品 ID 选择真实车型，不创建第二套商品记录。</p></div><div className="av-pageactions"><button className="av-btn" type="button" onClick={() => void load()}>刷新</button><a className="av-btn" href="/admin/ecommerce/products">商城商品列表</a></div></section>
     {loadError ? <p className="av-card av-inline-alert" role="alert">产品主数据无法读取：{loadError}</p> : null}
     {error ? <p className="av-card av-inline-alert" role="alert">{error}</p> : null}
     {notice ? <p className="av-card av-inline-notice" role="status">{notice}</p> : null}
