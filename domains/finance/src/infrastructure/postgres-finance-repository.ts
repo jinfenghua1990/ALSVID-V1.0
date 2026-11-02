@@ -145,7 +145,8 @@ export class PostgresFinanceRepository implements FinanceRepository {
       if(!component)throw new Error('Cost component insertion failed');
       for(let i=0;i<cargo.length;i++){
         const row=cargo[i]!;
-        const cents=i===cargo.length-1?input.amountCents-centsUsed:Math.round(input.amountCents*(weight[i]??0)/total);
+        const cumulativeWeight=weight.slice(0,i+1).reduce((sum,q)=>sum+q,0);
+        const cents=Math.round(input.amountCents*cumulativeWeight/total)-centsUsed;
         centsUsed+=cents;
         await e.query(`INSERT INTO finance.landed_cost_allocations(component_id,cargo_id,basis_value,allocated_amount,created_by) VALUES ($1,$2,$3,$4,$5)`,[component.id,row.id,row.quantity,(cents/100).toFixed(2),input.actorUserId]);
       }

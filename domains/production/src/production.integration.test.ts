@@ -278,6 +278,6 @@ test('completed QC production only enters factory-owned stock on real physical r
    await assert.rejects(production.receiveFinishedGoods(actor,order.id,{locationId:location.rows[0]!.id,quantity:2}),ProductionConflictError);
    const last=await production.receiveFinishedGoods(actor,order.id,{locationId:location.rows[0]!.id,quantity:1});
    assert.equal(last.remaining,0);
-   assert.equal(Number(await inventory.balanceAt({itemKind:'SKU',itemId:spec.skuId,unit:'EA',locationId:location.rows[0]!.id})),2);
+   assert.equal(await balanceAt(),2);
  }finally{await db.close();}
 });
