@@ -14,7 +14,7 @@ test('production Admin registry exposes only live module metadata, never Ardot s
     assert.ok(screen.title && screen.area && screen.id, screen.route);
     assert.deepEqual(screen.blocks, [], `${screen.route} must not embed fixture business records`);
     assert.doesNotMatch(screen.id, /^ardot-/);
-    assert.ok(existsSync(new URL('../' + screen.route.replace(/^\\/admin\\/?/, 'admin/') + '/page.tsx', import.meta.url)), screen.route);
+    assert.ok(existsSync(new URL('../' + screen.route.slice(1) + '/page.tsx', import.meta.url)), screen.route);
   }
 });
 
