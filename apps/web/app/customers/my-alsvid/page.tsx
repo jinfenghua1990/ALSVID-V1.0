@@ -1,7 +1,7 @@
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../../_lib/portal-access';
 import { PortalSectionPage } from '../../_components/portal-section-page';
-import { navigationFor } from '../../app-navigation';
+import { navigationFor } from '../_design/admin-navigation';
 
 const cards = [
   { eyebrow: '账户', title: 'My ALSVID 账户', description: '查看客户账户与已验证身份关系，不把账户本身等同于车辆所有权。' },

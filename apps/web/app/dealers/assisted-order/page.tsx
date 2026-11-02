@@ -1,7 +1,7 @@
 import { AppShell } from '@alsvid/ui';
 import { requireInternalPreviewSession } from '../../_lib/portal-access';
 import { PortalSectionPage } from '../../_components/portal-section-page';
-import { navigationFor } from '../../app-navigation';
+import { navigationFor } from '../_design/admin-navigation';
 
 const cards = [
   { eyebrow: '经销商', title: '选择经销商', description: '后续从真实 Dealer 主数据选择业务员代服务的经销商。' },
