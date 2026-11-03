@@ -72,7 +72,7 @@ Production has been deployed. Never assume a target has no business data based o
 
 ## Confirmed infrastructure direction
 
-- Runtime decision (2026-11-02): authorized **local-first** Docker Web/API/Gateway application deployment may use the existing Production Neon/R2/secrets; the existing Cloud Run `alsvid-web`/`alsvid-api` remains another live HTTPS location and the current public site release target. Local operational preference does not prove a public cutover or tested local deployment. See `docs/LOCAL_PRODUCTION.md`.
+- Runtime decision (2026-11-02): authorized **local-first** Docker Web/API/Gateway application deployment may use the existing Production Neon/R2/secrets; the existing Cloud Run `alsvid-web`/`alsvid-api` remains another live HTTPS location and the current public site release target. Local operational preference does not prove a public cutover or tested local deployment. See `docs/LOCAL_PRODUCTION.md`; that file is the only source for prerequisites (Node 22.18+, pnpm 10.34.6, clean Git `main`, Docker Compose v2, gcloud with Secret Accessor), non-secret value sources, loopback-only `127.0.0.1:8080`, the four mandatory Secret Manager names, and post-start evidence commands. Windows requires Docker Desktop with WSL2. Do not fill `GCP_PROJECT_ID` with `alsvid-prod`; the recorded live authority is `alsvid-production`.
 - Railway and Apply.Build are unapproved alternative runtime candidates, not additional business databases or active deployments.
 - Database standard: PostgreSQL.
 - Production database primary: Neon PostgreSQL.
