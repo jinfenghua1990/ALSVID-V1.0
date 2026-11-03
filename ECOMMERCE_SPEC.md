@@ -47,3 +47,11 @@ Google 官方参考：
 - https://developers.google.com/search/docs/specialty/ecommerce/designing-a-url-structure-for-ecommerce-sites
 - https://developers.google.com/search/docs/appearance/structured-data/product-variants
 - https://developers.google.com/search/docs/specialty/international/localized-versions
+
+## 5. 产品系列和技术平台分离（2026-11-03）
+
+- 产品系列代表车型家族。例如 `FC` = **折叠系列 / Folding Series**。新建整车选择产品系列，不选择 “Folding Carbon” 技术平台。
+- 技术平台属于工程维度，描述车架、电驱、电气等架构，不等于产品系列。现有工程平台数据保持不变。
+- 独立产品系列表 `product.series` 使用数值主键；`product.models.series_id` 持久记录用户选定系列。旧 `platform_id` 继续用于技术/历史兼容，创建时根据产品系列的独立默认技术平台自动绑定，绝不把 `series_id` 和 `platform_id` 视为同一标识。
+- 现有车型根据既有平台代码回填初始系列，不删除任何车型、SKU、订单、BOM 或库存。未来可单独调整系列与技术关系。
+- 新建示例：**折叠系列 · FC**、车型代号 **A2**、SKU 前缀 **A2**、商品名称 **ALSVID A2 折叠电动自行车**。建档并不自动生成 SKU、BOM 或官网发布。

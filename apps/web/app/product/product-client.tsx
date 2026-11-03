@@ -15,17 +15,18 @@ type CustomFieldDefinition = { id:string; product_type_code:'BIKE'|'ACCESSORY'|'
   status:'ACTIVE'|'RETIRED'; version:number };
 type CustomFieldValues = Record<string,string|number|boolean>;
 type Platform = { id: string; code: string; name: string; description: string; status: string; version: number };
-type Model = { custom_fields?: Record<string, unknown>; id: string; product_id: string; sku_prefix: string | null; platform_id: string | null; product_type_code: 'BIKE' | 'ACCESSORY' | 'SERVICE_PART'; code: string; name: string; description: string; status: string; version: number };
+type Series = {id:string;code:string;name_zh:string;name_en:string;status:string;default_platform_id:string|null};
+type Model = { custom_fields?: Record<string, unknown>; id: string; product_id: string; sku_prefix: string | null; platform_id: string | null; series_id?: string | null; product_type_code: 'BIKE' | 'ACCESSORY' | 'SERVICE_PART'; code: string; name: string; description: string; status: string; version: number };
 type Variant = { id: string; model_id: string; code: string; name: string; description: string; status: string; version: number };
 type Sku = { id: string; product_id: string; sku_number: string; sku_sequence: number; variant_id: string; sku: string; name: string; market_code: string | null; color_code: string | null; size_code: string | null; status: string; version: number };
-type Catalog = { modelFieldDefinitions:CustomFieldDefinition[]; productTypes: {code:string;name:string;description:string;status:string}[]; platforms: Platform[]; models: Model[]; variants: Variant[]; skus: Sku[] };
+type Catalog = { modelFieldDefinitions:CustomFieldDefinition[]; productTypes: {code:string;name:string;description:string;status:string}[]; platforms: Platform[]; series?: Series[]; models: Model[]; variants: Variant[]; skus: Sku[] };
 type Part = { id: string; part_number: string; name: string; category: string; default_unit: string; status: string };
 type BomRow = { id: string; code: string; name: string; model_id: string; model_code: string; revision_id: string | null; revision_code: string | null; revision_status: string | null; line_count: number | null };
 type BuildSpec = { id: string; code: string; status: string; version: number; sku_id: string; sku: string; bom_revision_id: string; revision_code: string; bom_code: string };
 type Engineering = { parts: Part[]; boms: BomRow[]; buildSpecs: BuildSpec[] };
 type EditTarget = { productTypeCode?:'BIKE'|'ACCESSORY'|'SERVICE_PART';customFields?:CustomFieldValues; entity: 'model' | 'variant' | 'sku'; id: string; version: number; name: string; status: string; description?: string; marketCode?: string | null; colorCode?: string | null; sizeCode?: string | null };
 
-const emptyCatalog: Catalog = { modelFieldDefinitions:[],productTypes: [], platforms: [], models: [], variants: [], skus: [] };
+const emptyCatalog: Catalog = { modelFieldDefinitions:[],productTypes: [], platforms: [], series: [], models: [], variants: [], skus: [] };
 const emptyEngineering: Engineering = { parts: [], boms: [], buildSpecs: [] };
 
 // Platform labels come from actual user-maintained records, not hardcoded example platforms.
@@ -316,7 +317,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
   const duplicateSkuDimensions = useMemo(() => findActiveSkuCombinationDuplicates(catalog.skus), [catalog.skus]);
   const filteredModels = useMemo(() => hierarchyRows.filter(({ model, platform }) =>
     (statusFilter === 'ALL' || model.status === statusFilter)
-    && (platformFilter === 'ALL' || model.platform_id === platformFilter)
+    && (platformFilter === 'ALL' || model.series_id === platformFilter)
     && (marketFilter === 'ALL' || modelSpecSummary(model, 'basic', 'markets').toLocaleUpperCase().includes(marketFilter))
     && (typeFilter === 'PARTS' ? model.product_type_code !== 'BIKE' : typeFilter === 'ALL' || model.product_type_code === typeFilter)
     && matchesModelRegisterSearch(
@@ -517,7 +518,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                 <select aria-label="按型号状态筛选" value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
                   <option value="ALL">全部状态</option><option value="DRAFT">草稿</option><option value="ACTIVE">启用</option><option value="RETIRED">已退役</option>
                 </select>
-                <select aria-label="按技术平台筛选" value={platformFilter} onChange={event => setPlatformFilter(event.target.value)}><option value="ALL">全部技术平台</option>{catalog.platforms.map(platform => <option key={platform.id} value={platform.id}>{platform.code} · {platform.name}</option>)}</select>
+                <select aria-label="按产品系列筛选" value={platformFilter} onChange={event => setPlatformFilter(event.target.value)}><option value="ALL">全部产品系列</option>{(catalog.series??[]).map(s => <option key={s.id} value={s.id}>{s.name_zh} · {s.code}</option>)}</select>
                 <select aria-label="按目标市场筛选" value={marketFilter} onChange={event => setMarketFilter(event.target.value)}><option value="ALL">全部目标市场</option><option value="DE">DE</option><option value="AT">AT</option><option value="GB">英国 / GB</option><option value="US">美国 / US</option></select>
               </div>
               {loading ? <div className={styles.archiveLoading}>正在读取车辆型号…</div> :
@@ -525,12 +526,12 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                 filteredModels.length ? (
                   <div className={styles.archiveTableWrap}>
                     <table className={styles.archiveTable} aria-label="车辆型号档案">
-                      <thead><tr><th>型号简称</th><th>整车名称 / 编码</th><th>技术平台</th><th>类型 / 驱动 / 轮径</th><th>基本信息</th><th>状态</th><th>操作</th></tr></thead>
+                      <thead><tr><th>型号简称</th><th>整车名称 / 编码</th><th>产品系列</th><th>类型 / 驱动 / 轮径</th><th>基本信息</th><th>状态</th><th>操作</th></tr></thead>
                       <tbody>{filteredModels.map(({ model, platform }) => (
                         <tr key={model.id}>
                           <td><strong>{modelShortName(model)}</strong></td>
                           <td>{model.name}<span>{model.code} · 商品 ID {model.product_id}</span></td>
-                          <td>{platform ? `${platformName(platform)} · ${platform.code}` : '未关联'}</td>
+                          <td>{(catalog.series??[]).find(s => s.id === model.series_id)?.name_zh ?? '未归类'}</td>
                           <td>{modelSpecSummary(model, 'basic', 'productType') || '未填写'}<span>{modelSpecSummary(model, 'drivetrain', 'type') || '未填写'} · {modelSpecSummary(model, 'wheels', 'wheelSize') || '未填写'}</span></td>
                           <td><span>{technicalSpecProgress(modelTechnicalSpecs(model.custom_fields), technicalSpecModules[0]!).filled}/{technicalSpecModules[0]!.fields.length}</span></td>
                           <td><span className={styles.archiveStatus} data-status={model.status}>{statusLabel(model.status)}</span></td>
@@ -582,12 +583,12 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
               filteredModels.length ? (
                 <div className={styles.archiveTableWrap}>
                   <table className={`${styles.archiveTable} ${styles.vehicleTable}`} aria-label="整车产品档案">
-                    <thead><tr><th>型号简称</th><th>整车名称 / 编码</th><th>技术平台</th><th>产品规格</th><th>目标市场</th><th>配置版本</th><th>BOM</th><th>状态</th><th>操作</th></tr></thead>
+                    <thead><tr><th>型号简称</th><th>整车名称 / 编码</th><th>产品系列</th><th>产品规格</th><th>目标市场</th><th>配置版本</th><th>BOM</th><th>状态</th><th>操作</th></tr></thead>
                     <tbody>{filteredModels.map(({ model, platform, variants }) => (
                       <tr key={model.id}>
                         <td title={model.name}><strong>{modelShortName(model)}</strong></td>
                         <td title={model.name}><strong>{model.name}</strong><span>{model.code} · 商品 ID {model.product_id}</span></td>
-                        <td>{platform ? platformName(platform) : '未关联'}<span>{platform?.code ?? ''}</span></td>
+                        <td>{(catalog.series??[]).find(s => s.id === model.series_id)?.name_zh ?? '未归类'}<span>{(catalog.series??[]).find(s => s.id === model.series_id)?.code ?? ''}</span></td>
                         <td>{modelSpecSummary(model, 'basic', 'productType') || '未填写'}<span>{modelSpecSummary(model, 'drivetrain', 'type') || '未填写'} · {modelSpecSummary(model, 'wheels', 'wheelSize') || '未填写'}</span></td>
                         <td>{modelSpecSummary(model, 'basic', 'markets') || '未填写'}</td>
                         <td>{variants.length ? `${variants.length} 个配置${variants.some(variant => variant.code==='DEFAULT' && variant.description.includes('尚未确认')) ? ' · 待确认' : ''}` : '未配置'}</td>
@@ -678,7 +679,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
               form => createKind === 'part' ?
                 {partNumber: form.get('partNumber'), name: form.get('name'), category: form.get('category'), defaultUnit: form.get('defaultUnit')} :
                 {productTypeCode: createKind === 'bike' ? 'BIKE' : form.get('productTypeCode'),
-                 platformId: createKind === 'bike' ? form.get('platformId') : null,
+                 seriesId: createKind === 'bike' ? form.get('seriesId') : null,
                  code: form.get('code'), skuPrefix: form.get('skuPrefix'), name: form.get('name'), description: form.get('description'),
                  customFields:readModelFields(form,(catalog.modelFieldDefinitions??[]).filter(def=>
                    def.product_type_code===(createKind==='bike'?'BIKE':newModelType)))},
@@ -700,9 +701,11 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                     {selectableProductTypes.filter(type => type.code !== 'BIKE').map(type => <option key={type.code} value={type.code}>{type.name}</option>)}
                   </select></label>
                 ) : (
-                  <label>技术平台 <select name="platformId" defaultValue="" required><option value="" disabled>选择已有技术平台</option>{catalog.platforms.filter(platform => platform.status === 'ACTIVE').map(platform => <option key={platform.id} value={platform.id}>{platform.name} · {platform.code}</option>)}</select></label>
+                  <label>产品系列 <select name="seriesId" defaultValue="" required><option value="" disabled>选择产品系列</option>{(catalog.series??[]).filter(s => s.status === 'ACTIVE').map(s => <option key={s.id} value={s.id}>{s.name_zh} · {s.code}</option>)}</select>
+                    <small>例：折叠系列 · FC。系列是产品分类；电驱、车架等技术参数另外维护。</small>
+                  </label>
                 )}
-                {createKind === 'bike' && !catalog.platforms.some(platform => platform.status === 'ACTIVE') ? <p className={styles.archiveError}>目前没有已启用的技术平台。请先在技术平台中建档并启用。</p> : null}
+                {createKind === 'bike' && !(catalog.series??[]).some(s => s.status === 'ACTIVE') ? <p className={styles.archiveError}>目前没有已启用的产品系列，无法创建整车。</p> : null}
                 {createKind === 'accessory' && !selectableProductTypes.some(type => type.code !== 'BIKE') ? <p className={styles.archiveError}>当前商品类型接口尚未提供可售配件类型，无法创建。</p> : null}
                 <label>{createKind === 'bike' ? '车型代号' : '商品编码'} <input name="code" autoFocus required maxLength={32} pattern="[A-Za-z0-9][A-Za-z0-9-]*" placeholder={createKind === 'bike' ? '如 A2、A1-ULTRA' : '输入唯一商品编码'} /></label>
                 <label>SKU 归属前缀（2 位）<input name="skuPrefix" required maxLength={2} pattern="[A-Za-z][A-Za-z0-9]" placeholder={createKind === 'bike' ? '如 A2、AU（车型独占）' : '如 A1、AL、UN'} />
@@ -716,7 +719,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
             )}
             <div className={styles.createActions}>
               <button type="button" className={styles.archiveSecondaryButton} onClick={() => setCreateKind(null)}>取消</button>
-              <button type="submit" className={styles.archivePrimaryButton} disabled={(createKind === 'bike' && !catalog.platforms.some(platform => platform.status === 'ACTIVE')) || (createKind === 'accessory' && !selectableProductTypes.some(type => type.code !== 'BIKE'))}>保存档案</button>
+              <button type="submit" className={styles.archivePrimaryButton} disabled={(createKind === 'bike' && !(catalog.series??[]).some(s => s.status === 'ACTIVE')) || (createKind === 'accessory' && !selectableProductTypes.some(type => type.code !== 'BIKE'))}>保存档案</button>
             </div>
           </form>
         </div>

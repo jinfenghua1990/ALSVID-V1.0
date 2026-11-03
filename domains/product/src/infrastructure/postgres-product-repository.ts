@@ -11,15 +11,16 @@ export class PostgresProductRepository implements ProductRepository {
   }
 
   async catalog(): Promise<ProductCatalog> {
-    const [platforms, models, variants, skus, productTypes,modelFieldDefs] = await Promise.all([
+    const [platforms, series, models, variants, skus, productTypes,modelFieldDefs] = await Promise.all([
       this.database.query<any>('SELECT id, code, name, description, status, version, created_at, updated_at FROM product.platforms ORDER BY code'),
-      this.database.query<any>('SELECT id, product_id, platform_id, product_type_code, code, sku_prefix, name, description, custom_fields, status, version, created_at, updated_at FROM product.models m WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=m.product_id) ORDER BY code'),
+      this.database.query<any>('SELECT series_id AS id,code,name_zh,name_en,status,default_platform_id FROM product.series ORDER BY code'),
+      this.database.query<any>('SELECT id, product_id, platform_id, series_id, product_type_code, code, sku_prefix, name, description, custom_fields, status, version, created_at, updated_at FROM product.models m WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=m.product_id) ORDER BY code'),
       this.database.query<any>('SELECT id, model_id, code, name, description, attributes, status, version, created_at, updated_at FROM product.variants v WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=v.product_id) ORDER BY code'),
       this.database.query<any>('SELECT id, product_id, sku_number, sku_sequence, variant_id, sku, name, market_code, color_code, size_code, attributes, status, version, created_at, updated_at FROM product.skus s WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=s.product_id) ORDER BY sku'),
       this.database.query<any>('SELECT code,name,description,status FROM product.product_types ORDER BY code'),
       this.modelFieldDefinitions(),
     ]);
-    return { modelFieldDefinitions:modelFieldDefs,productTypes: productTypes.rows, platforms: platforms.rows, models: models.rows, variants: variants.rows, skus: skus.rows.map((row) => ({ ...row, market_code: row.market_code?.trim() ?? null })) };
+    return { modelFieldDefinitions:modelFieldDefs,productTypes: productTypes.rows, platforms: platforms.rows, series: series.rows, models: models.rows, variants: variants.rows, skus: skus.rows.map((row) => ({ ...row, market_code: row.market_code?.trim() ?? null })) };
   }
 
 
@@ -255,15 +256,19 @@ export class PostgresProductRepository implements ProductRepository {
   }
 
   async createModel(input: CreateModelRecord): Promise<any> {
-    // Lock the ACTIVE platform row while creating a bike to serialize archive/create.
+    // Product family and engineering platform are separate values. The configured
+    // default platform only satisfies existing engineering compatibility checks.
     const sql = input.productTypeCode === 'BIKE'
-      ? `INSERT INTO product.models(platform_id,product_type_code,code,name,description,custom_fields,created_by,updated_by,sku_prefix)
-         SELECT p.id,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6,$9 FROM product.platforms p
-         WHERE p.id=$1 AND p.status='ACTIVE' FOR UPDATE OF p RETURNING *`
+      ? `INSERT INTO product.models(platform_id,series_id,product_type_code,code,name,description,custom_fields,created_by,updated_by,sku_prefix)
+         SELECT p.id,s.series_id,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6,$9
+         FROM product.series s
+         JOIN product.platforms p ON p.id=COALESCE($1::uuid,s.default_platform_id) AND p.status='ACTIVE'
+         WHERE (($10::bigint IS NOT NULL AND s.series_id=$10::bigint) OR ($10::bigint IS NULL AND s.code=p.code))
+           AND s.status='ACTIVE' FOR UPDATE OF p,s RETURNING *`
       : `INSERT INTO product.models(platform_id,product_type_code,code,name,description,custom_fields,created_by,updated_by,sku_prefix)
          VALUES ($1,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6,$9) RETURNING *`;
     const result = await this.database.query<any>(sql,
-      [input.platformId,input.productTypeCode,input.code,input.name,input.description,input.actorUserId,JSON.stringify(input.customFields ?? {}),JSON.stringify(input.technicalSpecs ?? {}),input.skuPrefix]);
+      [input.platformId,input.productTypeCode,input.code,input.name,input.description,input.actorUserId,JSON.stringify(input.customFields ?? {}),JSON.stringify(input.technicalSpecs ?? {}),input.skuPrefix,input.seriesId ?? null]);
     return result.rows[0] ?? null;
   }
 
