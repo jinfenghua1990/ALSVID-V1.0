@@ -173,7 +173,7 @@ export class StorefrontOrderService{
     'lineTaxAmount',l.line_tax_amount::text,'lineGrossAmount',l.line_gross_amount::text)
     ORDER BY l.created_at,l.id) FILTER(WHERE l.id IS NOT NULL),'[]'::json) AS lines
     FROM commerce.storefront_orders o LEFT JOIN commerce.storefront_order_lines l ON l.order_id=o.id
-    ${where} GROUP BY o.id ORDER BY o.created_at DESC,o.id DESC LIMIT ${limit}`,params),
+    ${where} GROUP BY o.record_id ORDER BY o.created_at DESC,o.id DESC LIMIT ${limit}`,params),
    // Reported total is the count of ALL rows matching the filter, so a truncated
    // page can never be mistaken for "there are only this many orders".
    this.db.query<{total:string}>(`SELECT count(*)::text AS total FROM commerce.storefront_orders o ${where}`,params),
@@ -379,7 +379,7 @@ export class StorefrontOrderService{
    'lineTaxAmount',l.line_tax_amount::text,'lineGrossAmount',l.line_gross_amount::text)
    ORDER BY l.created_at,l.id) FILTER(WHERE l.id IS NOT NULL),'[]'::json) AS lines
    FROM commerce.storefront_orders o LEFT JOIN commerce.storefront_order_lines l ON l.order_id=o.id
-   WHERE o.id=$1 GROUP BY o.id`,[id]);
+   WHERE o.id=$1 GROUP BY o.record_id`,[id]);
   const row=result.rows[0];if(!row)throw new CommerceNotFoundError('Storefront order draft not found');
   return mapOrder(row);
  }
