@@ -40,7 +40,7 @@ export interface CreateModelRecord {
   platformId: string | null;
   productTypeCode: ProductTypeCode;
   code: string;
-  skuPrefix: string | null;
+  skuPrefix?: string | null;
   name: string;
   description: string;
   actorUserId: string;
