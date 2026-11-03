@@ -194,25 +194,32 @@ CREATE INDEX idx_products_slug ON products(slug);
 ```html
 <script type="application/ld+json">
 {
-  "@context": "`https://schema.org/`",
+  "@context": "https://schema.org",
   "@type": "ProductGroup",
   "name": "ALSVID A1 E-Klapprad",
   "description": "ALSVID A1 kompaktes und faltbares Elektrofahrrad für urbane Mobilität.",
-  "url": "`https://yourdomain.com/de/bikes/a1`",
+  "url": "https://yourdomain.com/de/bikes/a1",
   "brand": {
     "@type": "Brand",
     "name": "ALSVID"
   },
   "productGroupID": "ALSVID-A1",
-  "variesBy": `https://schema.org/color`"
+  "variesBy": [
+    "https://schema.org/color"
   ],
-  "hasVariant": `https://yourdomain.com/images/alsvid-a1-matte-black-side.webp`",
+  "hasVariant": [
+    {
+      "@type": "Product",
+      "name": "ALSVID A1 E-Klapprad - Mattschwarz",
+      "sku": "A1-EBI-BLK",
+      "color": "Mattschwarz",
+      "image": "https://yourdomain.com/images/alsvid-a1-matte-black-side.webp",
       "offers": {
         "@type": "Offer",
         "priceCurrency": "EUR",
         "price": "1299.00",
-        "availability": "`https://schema.org/InStock`",
-        "url": "`https://yourdomain.com/de/bikes/a1?color=matte-black`"
+        "availability": "https://schema.org/InStock",
+        "url": "https://yourdomain.com/de/bikes/a1?color=matte-black"
       }
     },
     {
@@ -220,13 +227,13 @@ CREATE INDEX idx_products_slug ON products(slug);
       "name": "ALSVID A1 E-Klapprad - Polarweiß",
       "sku": "A1-EBI-WHT",
       "color": "Polarweiß",
-      "image": "`https://yourdomain.com/images/alsvid-a1-polar-white-side.webp`",
+      "image": "https://yourdomain.com/images/alsvid-a1-polar-white-side.webp",
       "offers": {
         "@type": "Offer",
         "priceCurrency": "EUR",
         "price": "1299.00",
-        "availability": "`https://schema.org/InStock`",
-        "url": "`https://yourdomain.com/de/bikes/a1?color=polar-white`"
+        "availability": "https://schema.org/InStock",
+        "url": "https://yourdomain.com/de/bikes/a1?color=polar-white"
       }
     }
   ]
