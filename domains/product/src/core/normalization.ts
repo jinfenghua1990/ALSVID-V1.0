@@ -36,6 +36,17 @@ export function normalizeMnemonicSku(value: string): string {
   return sku;
 }
 
+/** Deterministic default for bike SKU family prefixes; null means admin review is required. */
+export function deriveVehicleSkuPrefix(code: string): string | null {
+  if (typeof code !== 'string') return null;
+  const normalized = code.trim().toUpperCase();
+  if (/^[A-Z][A-Z0-9]$/.test(normalized)) return normalized;
+  const extended = /^([A-Z])[A-Z0-9]*-([A-Z])[A-Z0-9]*$/.exec(normalized);
+  if (extended) return `${extended[1]}${extended[2]}`;
+  const compact = /^([A-Z]{2})[A-Z0-9]*$/.exec(normalized);
+  return compact?.[1] ?? null;
+}
+
 export function normalizeMnemonicPrefix(value: string): string {
   if (typeof value !== 'string') throw new ProductValidationError('SKU prefix must be text');
   const prefix = value.trim().toUpperCase();

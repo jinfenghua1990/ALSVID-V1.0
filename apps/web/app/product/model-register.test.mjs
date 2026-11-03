@@ -10,7 +10,7 @@ const { outputText } = ts.transpileModule(source, {
 });
 const module = { exports: {} };
 runInNewContext(outputText, { exports: module.exports, module, Set });
-const { matchesModelRegisterSearch, modelEngineeringStage, modelBomSummary } = module.exports;
+const { matchesModelRegisterSearch, modelEngineeringStage, modelBomSummary, deriveVehicleSkuPrefix } = module.exports;
 
 const model = { id: 'model-a', code: 'FC1', name: 'Folding Carbon' };
 const platform = { code: 'FC', name: 'Folding Carbon' };
@@ -26,6 +26,15 @@ const engineering = {
   buildSpecs: [{ sku_id: 'sku-a', code: 'BS-FC1-DE', status: 'RELEASED' },
     { sku_id: 'sku-b', code: 'BS-GT1', status: 'DRAFT' }],
 };
+
+test('vehicle SKU prefix follows one fixed employee-safe rule', () => {
+  assert.equal(deriveVehicleSkuPrefix('A1'), 'A1');
+  assert.equal(deriveVehicleSkuPrefix('A2'), 'A2');
+  assert.equal(deriveVehicleSkuPrefix('A1-ULTRA'), 'AU');
+  assert.equal(deriveVehicleSkuPrefix('L1-PRO'), 'LP');
+  assert.equal(deriveVehicleSkuPrefix('FC1'), 'FC');
+  assert.equal(deriveVehicleSkuPrefix('unknown'), null);
+});
 
 test('product register searches related variants, SKU, market, BOM and build specification', () => {
   for (const query of ['FC1', 'Folding', 'PRO', 'BLK', 'FC1-PRO-DE-BLK', 'BOM-FC1', 'FC1 Assembly', 'BS-FC1-DE']) {
