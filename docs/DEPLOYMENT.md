@@ -29,6 +29,22 @@ A separate cloud Test environment is not part of the current architecture. Recon
 
 Until one of those conditions exists, maintaining a second cloud **Test** runtime is unnecessary. Authorized local Production application hosting is a separate opt-in mode; it never changes the Production database authority.
 
+## Unified Test Gateway boundary
+
+The local/CI Test runtime keeps `web`, `api`, and `worker` as separate processes/containers inside the same ALSVID system. This is runtime separation, not separate business systems, duplicated domain ownership, or a new independent runtime.
+
+For the Test stack in `infra/docker-compose.test.yml`:
+
+- The only host-published Web/API entry is `http://localhost:8080`, served by the version-controlled Nginx `gateway`.
+- Web `3000` and API `4000` remain internal to the Docker network. Do not publish `3000/4000` or legacy host ports `3001/4001` directly.
+- Worker remains a separate internal process and has no user-facing host port.
+- PostgreSQL may expose its Test-only port `5433` for local test tooling; it is not another Web/API entry point.
+- `infra/gateway/nginx.conf` is the routing source of truth. The general `/api/` route goes to API and the remaining paths go to Web, while explicitly configured Next.js/BFF/session/control/admin/public/settings/partners and image-upload routes are intentional exceptions. Do not simplify this into a blanket rule that every `/api/*` request goes to API.
+- Any Gateway route or published-port change must update this document and the relevant health/smoke tests together.
+- This is a local/CI Test access rule only. It does not create a cloud Test runtime or change the Production deployment topology. Test data and credentials must remain isolated from Production.
+
+Use `docs/PRODUCTION_RUNBOOK.md` for the exact Production release, secret-management, and rollback procedure, and `docs/RELEASE_FLOW.md` for current release gates.
+
 ## Selected production placement
 
 Current public-cloud release topology is retained from ADR 0003, with the local Production application option documented separately:

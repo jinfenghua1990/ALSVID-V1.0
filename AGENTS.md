@@ -39,6 +39,9 @@ For portal UI, design-tool ownership, supplier work, and storefront checkout/pay
 17. relevant ADRs under `docs/adr/`
 18. the current issue/PR and affected `domain.json`
 19. `docs/ENVIRONMENT_ARCHITECTURE.md`
+20. `docs/DEPLOYMENT.md` (M1 + Docker Test topology and unified Gateway)
+21. `docs/PRODUCTION_RUNBOOK.md` (Production release, secrets, and rollback)
+22. `docs/RELEASE_FLOW.md` (current release workflow and acceptance gates)
 
 For product, brand, website, dealer, customer-support, commerce or AI work, also read the relevant files under `knowledge/`. The knowledge base is the shared ALSVID business context; this file and the `docs/` files remain authoritative for engineering constraints. For ALSVID WWW, My ALSVID or Dealer Portal web UI, follow `docs/ALSVID_WEB_I18N_STANDARD.md`. ALSVID-owned storefront copy must use the shared locale catalogs; any future provider-hosted payment UI must be reviewed for locale coverage separately.
 
@@ -76,6 +79,8 @@ Production has been deployed. Never assume a target has no business data based o
 - Development workflow (owner decision, 2026-10-31): all code edits are made in GitHub task branches and PRs; do not modify code in the local checkout. Compare the current main and task branch before editing and preserve existing functionality. Use existing review, CI and release gates. Every actual deployment and business session must use the shared production services and data; verify the connection rather than relying on labels.
 - Production is the only active cloud runtime; the former shared Cloud Run Development/Test runtime in `alsvid-dev` is retired. **Observed live deployment (2026-10-25, run #40169393607):** `GCP_PROJECT_ID=alsvid-production`, region `europe-west1`. The separately created `alsvid-prod` project is an intended migration target, **not a verified deployed replacement**. Never silently retarget GitHub production variables, credentials, database or DNS; require an audited cutover and rollback plan.
 - There is no separate test business environment. Automated CI checks may use ephemeral synthetic fixtures without production credentials; they are not a deployed business environment. Never claim an unverified production database or R2 connection is live.
+- **Unified Test Gateway (owner-approved):** Development/Test remains M1 + Docker; do not create a third cloud Test runtime. Keep Web, API and Worker as separate processes/containers. For the Test Compose stack, publish the Gateway on host port 8080 as the only Web/API entry; keep Web 3000 and API 4000 internal, and keep Worker internal. Follow the explicit routing in `infra/gateway/nginx.conf`, including its Next.js/BFF/session/admin and image-upload exceptions; do not collapse all `/api/*` paths onto one upstream. Test data and credentials stay isolated from Production. See `docs/DEPLOYMENT.md`.
+- **Production release and recovery invariant:** Production releases go only through the GitHub workflows from merged `main`, tied to the exact source commit and immutable image digest. Manual rollback may select only a previously merged, compatible `release_sha`. Production credentials belong in Google Cloud Secret Manager, never in the repository or GitHub variables. Application-image rollback does not reverse database migrations; use a reviewed forward migration or approved database recovery procedure. Never patch a running container. See `docs/PRODUCTION_RUNBOOK.md` and `docs/RELEASE_FLOW.md`.
 - Q4 is not currently part of the Production disaster-recovery architecture; full DR is deferred.
 
 ## Admin record-list design
