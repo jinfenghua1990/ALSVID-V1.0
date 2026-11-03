@@ -45,6 +45,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 export default async function HomeDetailPage({ params, searchParams }: Props) {
   const { locale, slug } = await params;
+  // Historical F8 (100001) was consolidated into canonical L1 (100006).
+  // Before editorial publication, keep its existing localized L1 preview reachable.
+  if (slug === "100001") {
+    if (!isLocale(locale)) notFound();
+    const catalog = await publishedProductCatalog();
+    const l1Published = catalog.items.some(item => item.code === "L1" && item.productId === "100006");
+    redirect(l1Published ? `/${locale}/explore/100006` : `/${locale}/explore/l8`);
+  }
   if (/^\d{6}$/.test(slug)) {
     if (!isLocale(locale)) notFound();
     const product = (await publishedProductCatalog()).items.find(item => item.productId === slug && item.type === "BIKE");
