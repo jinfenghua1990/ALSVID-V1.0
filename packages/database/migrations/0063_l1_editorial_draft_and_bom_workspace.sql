@@ -102,3 +102,20 @@ BEGIN
   END IF;
 END;
 $l1_readiness$;
+
+-- Global safety rule: an empty BOM shell may be edited, but can never be released.
+-- This also protects future models created through the existing Engineering API.
+CREATE OR REPLACE FUNCTION engineering.prevent_empty_bom_revision_release()
+RETURNS trigger LANGUAGE plpgsql AS $bom_guard$
+BEGIN
+  IF NEW.status='RELEASED' AND OLD.status='DRAFT' AND NOT EXISTS (
+    SELECT 1 FROM engineering.bom_lines l WHERE l.revision_id=NEW.id
+  ) THEN
+    RAISE EXCEPTION 'Cannot release BOM revision without at least one BOM line';
+  END IF;
+  RETURN NEW;
+END;
+$bom_guard$;
+CREATE TRIGGER bom_revision_requires_lines_before_release
+BEFORE UPDATE OF status ON engineering.bom_revisions
+FOR EACH ROW EXECUTE FUNCTION engineering.prevent_empty_bom_revision_release();
