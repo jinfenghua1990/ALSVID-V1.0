@@ -45,6 +45,7 @@ export interface PlatformRow extends ProductRowBase {}
 
 export interface ModelRow extends ProductRowBase {
   product_id: string;
+  sku_prefix: string | null;
   custom_fields: Record<string, CustomFieldValue>;
   platform_id: string | null;
   product_type_code: ProductTypeCode;

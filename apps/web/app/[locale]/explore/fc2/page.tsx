@@ -4,7 +4,6 @@ import { notFound, redirect } from "next/navigation";
 import { isLocale, locales } from "../../../_lib/i18n/routing";
 import { translator } from "../../../_lib/i18n";
 import { portalUrlFor } from "../../../_lib/portal-routing";
-import { publishedProductCatalog } from "../../../_components/catalog/published-product-catalog";
 import { Fc2ProductPage } from "../../../_components/product/fc2-product";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -27,7 +26,5 @@ export default async function Fc2Page({ params }: Props) {
   const host = (await headers()).get("host") ?? "";
   const prefix = host.toLowerCase().split(".")[0];
   if (prefix === "admin" || prefix === "my" || prefix === "dealer") redirect(`/${prefix}`);
-  const product = (await publishedProductCatalog()).items.find(item => item.code === "L1-PRO");
-  if (product) redirect(`/${locale}/explore/${product.productId}`);
   return <Fc2ProductPage locale={locale} dealerUrl={portalUrlFor(host,"dealer")} myUrl={portalUrlFor(host,"my")} />;
 }

@@ -13,7 +13,7 @@ export class PostgresProductRepository implements ProductRepository {
   async catalog(): Promise<ProductCatalog> {
     const [platforms, models, variants, skus, productTypes,modelFieldDefs] = await Promise.all([
       this.database.query<any>('SELECT id, code, name, description, status, version, created_at, updated_at FROM product.platforms ORDER BY code'),
-      this.database.query<any>('SELECT id, product_id, platform_id, product_type_code, code, name, description, custom_fields, status, version, created_at, updated_at FROM product.models m WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=m.product_id) ORDER BY code'),
+      this.database.query<any>('SELECT id, product_id, platform_id, product_type_code, code, sku_prefix, name, description, custom_fields, status, version, created_at, updated_at FROM product.models m WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=m.product_id) ORDER BY code'),
       this.database.query<any>('SELECT id, model_id, code, name, description, attributes, status, version, created_at, updated_at FROM product.variants v WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=v.product_id) ORDER BY code'),
       this.database.query<any>('SELECT id, product_id, sku_number, sku_sequence, variant_id, sku, name, market_code, color_code, size_code, attributes, status, version, created_at, updated_at FROM product.skus s WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=s.product_id) ORDER BY sku'),
       this.database.query<any>('SELECT code,name,description,status FROM product.product_types ORDER BY code'),
@@ -257,13 +257,13 @@ export class PostgresProductRepository implements ProductRepository {
   async createModel(input: CreateModelRecord): Promise<any> {
     // Lock the ACTIVE platform row while creating a bike to serialize archive/create.
     const sql = input.productTypeCode === 'BIKE'
-      ? `INSERT INTO product.models(platform_id,product_type_code,code,name,description,custom_fields,created_by,updated_by)
-         SELECT p.id,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6 FROM product.platforms p
+      ? `INSERT INTO product.models(platform_id,product_type_code,code,name,description,custom_fields,created_by,updated_by,sku_prefix)
+         SELECT p.id,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6,$9 FROM product.platforms p
          WHERE p.id=$1 AND p.status='ACTIVE' FOR UPDATE OF p RETURNING *`
-      : `INSERT INTO product.models(platform_id,product_type_code,code,name,description,custom_fields,created_by,updated_by)
-         VALUES ($1,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6) RETURNING *`;
+      : `INSERT INTO product.models(platform_id,product_type_code,code,name,description,custom_fields,created_by,updated_by,sku_prefix)
+         VALUES ($1,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6,$9) RETURNING *`;
     const result = await this.database.query<any>(sql,
-      [input.platformId,input.productTypeCode,input.code,input.name,input.description,input.actorUserId,JSON.stringify(input.customFields ?? {}),JSON.stringify(input.technicalSpecs ?? {})]);
+      [input.platformId,input.productTypeCode,input.code,input.name,input.description,input.actorUserId,JSON.stringify(input.customFields ?? {}),JSON.stringify(input.technicalSpecs ?? {}),input.skuPrefix]);
     return result.rows[0] ?? null;
   }
 
@@ -273,6 +273,14 @@ export class PostgresProductRepository implements ProductRepository {
       [input.modelId, input.code, input.name, input.description, JSON.stringify(input.attributes), input.actorUserId],
     );
     return result.rows[0];
+  }
+
+  async skuOwnerForVariant(variantId: string): Promise<{modelCode:string;skuPrefix:string|null;productTypeCode:'BIKE'|'ACCESSORY'|'SERVICE_PART'}|null> {
+    const result = await this.database.query<{model_code:string;sku_prefix:string|null;product_type_code:'BIKE'|'ACCESSORY'|'SERVICE_PART'}>(
+      `SELECT m.code AS model_code,m.sku_prefix,m.product_type_code FROM product.variants v
+         JOIN product.models m ON m.id=v.model_id WHERE v.id=$1`,[variantId]);
+    const row = result.rows[0];
+    return row ? {modelCode:row.model_code,skuPrefix:row.sku_prefix,productTypeCode:row.product_type_code} : null;
   }
 
   async createSku(input: CreateSkuRecord): Promise<any> {

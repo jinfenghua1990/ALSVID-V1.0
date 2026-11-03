@@ -10,9 +10,6 @@ import { PendingPurchaseActions } from "../../../_components/product/pending-pur
 import type { AccessoryCategory } from "../../../_lib/commerce/storefront-cart";
 import { Fc1ProductPage, generateFc1Metadata } from "../../../_components/product/fc1-product";
 import { Fc1StoryPage } from "../../../_components/product/fc1-story-v4";
-import { Fc2ProductPage } from "../../../_components/product/fc2-product";
-import { L7ProductPage } from "../../../_components/product/l7-product";
-import { L8ProductPage } from "../../../_components/product/l8-product";
 import { publishedProductCatalog } from "../../../_components/catalog/published-product-catalog";
 import styles from "../../../_components/home/original-home.module.css";
 
@@ -24,11 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const product = (await publishedProductCatalog()).items.find(item => item.productId === slug);
     if (product && isLocale(locale)) return {title:product.title[locale],alternates:{canonical:`https://www.alsvidbike.com/${locale}/explore/${slug}`}};
   }
-  if (slug === "fc1") {
-    const product = (await publishedProductCatalog()).items.find(item => item.code === "A1-ULTRA");
-    if (product) redirect(`/${locale}/explore/${product.productId}`);
-    return generateFc1Metadata(locale);
-  }
+  if (slug === "fc1") return generateFc1Metadata(locale);
   const detail = getHomeDetail(slug);
   if (!isLocale(locale) || !detail) return {};
   const t = translator(locale);
@@ -54,20 +47,14 @@ export default async function HomeDetailPage({ params, searchParams }: Props) {
     if (!isLocale(locale)) notFound();
     const product = (await publishedProductCatalog()).items.find(item => item.productId === slug && item.type === "BIKE");
     if (!product) notFound();
-    const host = (await headers()).get("host") ?? "";
-    const prefix = host.toLowerCase().split(".")[0];
-    if (prefix === "admin" || prefix === "my" || prefix === "dealer") redirect(`/${prefix}`);
-    const myUrl = portalUrlFor(host, "my");
-    if (product.code === "A1-ULTRA") return <Fc1StoryPage locale={locale} myUrl={myUrl} />;
-    if (product.code === "L1-PRO") return <Fc2ProductPage locale={locale} dealerUrl={portalUrlFor(host,"dealer")} myUrl={myUrl} />;
-    if (product.code === "A1") return <L7ProductPage locale={locale} myUrl={myUrl} />;
-    if (product.code === "L1") return <L8ProductPage locale={locale} myUrl={myUrl} />;
-    notFound();
+    // Numeric product IDs stay as safe redirect aliases, never canonical SEO landing pages.
+    const routes: Record<string,string> = {'A1-ULTRA':'fc1','L1-PRO':'fc2',A1:'l7',L1:'l1'};
+    const target = routes[product.code];
+    if (!target) notFound();
+    permanentRedirect(`/${locale}/explore/${target}`);
   }
   if (slug === "fc1") {
     if (!isLocale(locale)) notFound();
-    const product = (await publishedProductCatalog()).items.find(item => item.code === "A1-ULTRA");
-    if (product) redirect(`/${locale}/explore/${product.productId}`);
     const host = (await headers()).get("host") ?? "";
     const prefix = host.toLowerCase().split(".")[0];
     if (prefix === "admin" || prefix === "my" || prefix === "dealer") redirect(`/${prefix}`);

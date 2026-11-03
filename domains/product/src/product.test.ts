@@ -24,3 +24,13 @@ test('SKU dimensions normalize color and size independently from SKU and Model i
    assert.throws(()=>normalizeSkuDimension(input,'colorCode'),ProductValidationError);
  }
 });
+
+test('mnemonic product SKUs follow the 2-3-3 controlled code', async () => {
+  const {normalizeMnemonicSku,normalizeMnemonicPrefix} = await import('./index.js');
+  assert.equal(normalizeMnemonicSku(' a1-ebi-blk '), 'A1-EBI-BLK');
+  assert.equal(normalizeMnemonicSku('un-hlm-mbk'), 'UN-HLM-MBK');
+  assert.equal(normalizeMnemonicPrefix(' au '), 'AU');
+  for (const bad of ['A1-EBI-BLACK','A1-XYZ-BLK','ALS-EBI-BLK','A1_EBI_BLK','A1-EBI-0'])
+    assert.throws(() => normalizeMnemonicSku(bad), ProductValidationError);
+  assert.throws(() => normalizeMnemonicPrefix('A1-ULTRA'), ProductValidationError);
+});

@@ -2,7 +2,7 @@ import { ForbiddenError } from '@alsvid/kernel';
 import { postgresErrorCode } from '@alsvid/database';
 import { ProductConflictError, ProductNotFoundError, ProductValidationError } from '../core/errors.js';
 import { ProductCapability, type HomepageBinding, type HomepageBindingMode, type HomepageSlotCode, type ModelFieldDefinition, type CustomFieldType, type CustomFieldValue, type ProductCatalog, type ProductEntityKind, type ProductStatus, type ProductTypeCode } from '../core/model.js';
-import { normalizeProductCode, normalizeProductCountry, normalizeSkuDimension } from '../core/normalization.js';
+import { normalizeProductCode, normalizeProductCountry, normalizeSkuDimension, normalizeMnemonicSku, normalizeMnemonicPrefix } from '../core/normalization.js';
 import {approvedCatalogAssets,mergeCatalogAssets,assertPublicationTransition,curatedCatalogImage,toPublicCatalogItem,validatePublicationDraft,type PublicationAction,type PublicationDraft} from '../core/publication.js';
 import type { ProductActor, ProductAuditPort, ProductRepository } from './ports.js';
 
@@ -284,7 +284,7 @@ export class ProductService {
     return row;
   }
 
-  async createModel(actor: ProductActor, input: { platformId?: string | null; productTypeCode?: ProductTypeCode; code: string; name: string; description?: string; customFields?: Record<string,unknown>; technicalSpecs?: Record<string,unknown> }): Promise<any> {
+  async createModel(actor: ProductActor, input: { platformId?: string | null; productTypeCode?: ProductTypeCode; code: string; skuPrefix?: string; name: string; description?: string; customFields?: Record<string,unknown>; technicalSpecs?: Record<string,unknown> }): Promise<any> {
     requireCapability(actor, ProductCapability.Write);
     const code = normalizeProductCode(input.code);
     const productTypeCode = input.productTypeCode ?? 'BIKE';
@@ -292,11 +292,16 @@ export class ProductService {
     if (productTypeCode === 'BIKE' && !input.platformId) throw new ProductValidationError('Bicycle requires technical platform');
     if (productTypeCode !== 'BIKE' && input.platformId) throw new ProductValidationError('Accessory/service part cannot use a bicycle platform');
     if (!input.name?.trim()) throw new ProductValidationError('Model name is required');
+    // Existing API callers may omit this until the related model is normalized.
+    const skuPrefix = input.skuPrefix ? normalizeMnemonicPrefix(input.skuPrefix) :
+      (code.length === 2 && /^[A-Z][A-Z0-9]$/.test(code) ? code : null);
+    if (productTypeCode === 'BIKE' && (skuPrefix === 'AL' || skuPrefix === 'UN'))
+      throw new ProductValidationError('AL and UN are reserved for shared/universal accessories');
     const customFields = validateModelFields(await this.repository.modelFieldDefinitions(),
       productTypeCode,input.customFields ?? {},{});
     const technicalSpecs = normalizeTechnicalSpecs(input.technicalSpecs);
     try {
-      const row = await this.repository.createModel({ platformId: productTypeCode === 'BIKE' ? input.platformId! : null, productTypeCode, code, name: input.name.trim(), description: input.description?.trim() ?? '', customFields, technicalSpecs, actorUserId: actor.userId });
+      const row = await this.repository.createModel({ platformId: productTypeCode === 'BIKE' ? input.platformId! : null, productTypeCode, code, skuPrefix, name: input.name.trim(), description: input.description?.trim() ?? '', customFields, technicalSpecs, actorUserId: actor.userId });
       if (!row) throw new ProductValidationError('Selected technical platform is missing or not active');
       await this.audit.record({ actorUserId: actor.userId, action: 'product.model_created', targetType: 'product.model', targetId: row.id, metadata: { code } });
       return row;
@@ -321,7 +326,16 @@ export class ProductService {
 
   async createSku(actor: ProductActor, input: { variantId: string; sku: string; name: string; marketCode?: string; colorCode?: string; sizeCode?: string; attributes?: Record<string, unknown> }): Promise<any> {
     requireCapability(actor, ProductCapability.Write);
-    const sku = normalizeProductCode(input.sku);
+    const sku = normalizeMnemonicSku(input.sku);
+    const owner = await this.repository.skuOwnerForVariant(input.variantId);
+    if (!owner) throw new ProductNotFoundError('Variant not found');
+    if (!owner.skuPrefix) throw new ProductValidationError('Assign a 2-character SKU family prefix to this model first');
+    if (sku.slice(0,2) !== owner.skuPrefix)
+      throw new ProductValidationError('SKU prefix does not match its model family');
+    if (owner.productTypeCode === 'BIKE' && sku.slice(3,6) !== 'EBI')
+      throw new ProductValidationError('Bicycle SKU category must be EBI');
+    if (owner.productTypeCode !== 'BIKE' && sku.slice(3,6) === 'EBI')
+      throw new ProductValidationError('Accessory cannot use EBI category');
     if (!input.name?.trim()) throw new ProductValidationError('SKU name is required');
     validateProductAttributes(input.attributes);
     try {

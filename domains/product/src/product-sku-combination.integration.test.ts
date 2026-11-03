@@ -18,19 +18,19 @@ test('real PostgreSQL guards future concurrent-prone duplicate SKU dimensions wi
   const platform=(await db.query<{id:string}>(
     "SELECT id FROM product.platforms WHERE code='FC' LIMIT 1")).rows[0]!;
   const model=(await db.query<{id:string}>(
-   "INSERT INTO product.models(platform_id,code,name) VALUES($1,$2,'SKU fixture') RETURNING id",
+   "INSERT INTO product.models(platform_id,code,name,sku_prefix) VALUES($1,$2,'SKU fixture','T8') RETURNING id",
    [platform.id,code()])).rows[0]!;
   const variant=(await db.query<{id:string}>(
    "INSERT INTO product.variants(model_id,code,name) VALUES($1,$2,'Core') RETURNING id",
    [model.id,code()])).rows[0]!;
   const actor={userId:user.id,permissions:['product.read','product.write']};
   const service=new ProductService(new PostgresProductRepository(db),{record:async()=>{}});
-  const first=await service.createSku(actor,{variantId:variant.id,sku:code(),name:'Black 20',
+  const first=await service.createSku(actor,{variantId:variant.id,sku:'T8-EBI-BLK',name:'Black 20',
    marketCode:'DE',colorCode:'black',sizeCode:'20'});
   assert.equal(first.color_code,'BLACK');
-  await assert.rejects(()=>service.createSku(actor,{variantId:variant.id,sku:code(),
+  await assert.rejects(()=>service.createSku(actor,{variantId:variant.id,sku:'T8-EBI-BK2',
    name:'Duplicate Black',marketCode:'de',colorCode:'BLACK',sizeCode:'20'}),ProductConflictError);
-  const gray=await service.createSku(actor,{variantId:variant.id,sku:code(),name:'Gray 20',
+  const gray=await service.createSku(actor,{variantId:variant.id,sku:'T8-EBI-GRY',name:'Gray 20',
    marketCode:'DE',colorCode:'GRAY',sizeCode:'20'});
   await assert.rejects(()=>service.updateEntity(actor,'sku',gray.id,{expectedVersion:gray.version,
    colorCode:'black'}),ProductConflictError);

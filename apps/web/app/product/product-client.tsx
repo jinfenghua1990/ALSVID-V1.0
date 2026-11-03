@@ -15,7 +15,7 @@ type CustomFieldDefinition = { id:string; product_type_code:'BIKE'|'ACCESSORY'|'
   status:'ACTIVE'|'RETIRED'; version:number };
 type CustomFieldValues = Record<string,string|number|boolean>;
 type Platform = { id: string; code: string; name: string; description: string; status: string; version: number };
-type Model = { custom_fields?: Record<string, unknown>; id: string; product_id: string; platform_id: string | null; product_type_code: 'BIKE' | 'ACCESSORY' | 'SERVICE_PART'; code: string; name: string; description: string; status: string; version: number };
+type Model = { custom_fields?: Record<string, unknown>; id: string; product_id: string; sku_prefix: string | null; platform_id: string | null; product_type_code: 'BIKE' | 'ACCESSORY' | 'SERVICE_PART'; code: string; name: string; description: string; status: string; version: number };
 type Variant = { id: string; model_id: string; code: string; name: string; description: string; status: string; version: number };
 type Sku = { id: string; product_id: string; sku_number: string; sku_sequence: number; variant_id: string; sku: string; name: string; market_code: string | null; color_code: string | null; size_code: string | null; status: string; version: number };
 type Catalog = { modelFieldDefinitions:CustomFieldDefinition[]; productTypes: {code:string;name:string;description:string;status:string}[]; platforms: Platform[]; models: Model[]; variants: Variant[]; skus: Sku[] };
@@ -738,12 +738,12 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                 {partNumber: form.get('partNumber'), name: form.get('name'), category: form.get('category'), defaultUnit: form.get('defaultUnit')} :
                 {productTypeCode: createKind === 'bike' ? 'BIKE' : form.get('productTypeCode'),
                  platformId: createKind === 'bike' ? form.get('platformId') : null,
-                 code: form.get('code'), name: form.get('name'), description: form.get('description'),
+                 code: form.get('code'), skuPrefix: form.get('skuPrefix'), name: form.get('name'), description: form.get('description'),
                  customFields:readModelFields(form,(catalog.modelFieldDefinitions??[]).filter(def=>
                    def.product_type_code===(createKind==='bike'?'BIKE':newModelType)))},
               () => setCreateKind(null))}>
             <div className={styles.createCardHeading}>
-              <div><span>商品档案</span><h2>{createKind === 'bike' ? '新建整车' : createKind === 'part' ? '新建生产零件' : '新建可售配件'}</h2><p>填写基础信息后保存；商品 ID 由系统自动分配六位数字，永久不变。不会自动建立 SKU、BOM 或商城绑定。</p></div>
+              <div><span>商品档案</span><h2>{createKind === 'bike' ? '新建整车' : createKind === 'part' ? '新建生产零件' : '新建可售配件'}</h2><p>填写基础信息后保存；商品 ID 由系统自动分配六位数字，永久不变。SKU 采用 A1-EBI-BLK 形式，数字商品 ID 只作为内部数据库身份；保存档案不会自动建立颜色 SKU、BOM 或商城绑定。</p></div>
               <button type="button" className={styles.createClose} aria-label="关闭" onClick={() => setCreateKind(null)}>×</button>
             </div>
             {createKind === 'part' ? (
@@ -763,7 +763,10 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                 )}
                 {createKind === 'bike' && !catalog.platforms.some(platform => platform.status === 'ACTIVE') ? <p className={styles.archiveError}>目前没有已启用的技术平台。请先在技术平台中建档并启用。</p> : null}
                 {createKind === 'accessory' && !selectableProductTypes.some(type => type.code !== 'BIKE') ? <p className={styles.archiveError}>当前商品类型接口尚未提供可售配件类型，无法创建。</p> : null}
-                <label>{createKind === 'bike' ? '型号简称' : '商品编码'} <input name="code" autoFocus required maxLength={80} placeholder={createKind === 'bike' ? '例如 F8、FC1' : '输入唯一商品编码'} /></label>
+                <label>{createKind === 'bike' ? '车型代号' : '商品编码'} <input name="code" autoFocus required maxLength={32} pattern="[A-Za-z0-9][A-Za-z0-9-]*" placeholder={createKind === 'bike' ? '如 A2、A1-ULTRA' : '输入唯一商品编码'} /></label>
+                <label>SKU 归属前缀（2 位）<input name="skuPrefix" required maxLength={2} pattern="[A-Za-z][A-Za-z0-9]" placeholder={createKind === 'bike' ? '如 A2、AU（车型独占）' : '如 A1、AL、UN'} />
+                  <small>只确定 SKU 家族；整车颜色稍后在「版本与 SKU」维护。长车型名（如 A1-ULTRA）必须使用独立前缀（如 AU）。</small>
+                </label>
                 <label>商品名称 <input name="name" required maxLength={160} placeholder="输入商品名称" /></label>
                 <label>说明（可选） <textarea name="description" rows={3} placeholder="简要描述商品" /></label>
                 <ModelFieldInputs key={createKind==='bike'?'BIKE':newModelType} definitions={(catalog.modelFieldDefinitions??[])
@@ -966,7 +969,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
           <section className={styles.variantSkuDialog} role="dialog" aria-modal="true" aria-label="编辑车型配置及 SKU"
             onMouseDown={event => event.stopPropagation()} onKeyDown={event => {if(event.key === 'Escape')setManageModelId(null);}}>
             <header className={styles.variantSkuHeader}>
-              <div><span>产品研发 / 整车产品</span><h2>{manageModel.name} · 版本与 SKU</h2><p>商品 ID {manageModel.product_id} · 型号 {manageModel.code}。直接在弹窗内维护，不另建管理页面。</p></div>
+              <div><span>产品研发 / 整车产品</span><h2>{manageModel.name} · 版本与 SKU</h2><p>内部商品 ID {manageModel.product_id} · 型号 {manageModel.code} · SKU 前缀 {manageModel.sku_prefix ?? '未设置'}。直接在弹窗内维护，不另建管理页面。</p></div>
               <button type="button" className={styles.archiveSecondaryButton} onClick={() => setManageModelId(null)}>关闭</button>
             </header>
             {message ? <p className={styles.archiveFeedback} role="status">{message}</p> : null}
@@ -1008,7 +1011,9 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
               <form onSubmit={event => void submitForm(event,'/v1/product/skus',form => ({variantId:form.get('variantId'),sku:form.get('sku'),name:form.get('name'),marketCode:form.get('marketCode')||undefined,colorCode:form.get('colorCode')||undefined,sizeCode:form.get('sizeCode')||undefined}))}>
                 <h3>新增 SKU 规格</h3>
                 <label>所属版本<select name="variantId" key={manageVariants.map(v=>v.id).join(',')} required defaultValue=""><option value="" disabled>选择配置版本</option>{manageVariants.map(variant=><option key={variant.id} value={variant.id}>{variant.code} · {variant.name}</option>)}</select></label>
-                <label>SKU 编码<input name="sku" placeholder="ALS-A1-STD-DE-BLK" required /></label>
+                <label>SKU 编码<input name="sku" maxLength={10} pattern="[A-Za-z][A-Za-z0-9]-[A-Za-z]{3}-[A-Za-z0-9]{3}" placeholder={`${manageModel.sku_prefix ?? 'A1'}-EBI-BLK`} required />
+                    <small>统一 2-3-3 格式，如 A1-EBI-BLK；数字 SKU ID 由数据库单独分配。</small>
+                  </label>
                 <label>SKU 名称<input name="name" placeholder="A1 Standard 黑色" required /></label>
                 <div className={styles.variantSkuDimensions}>
                   <label>市场<input name="marketCode" maxLength={2} placeholder="DE" /></label>
