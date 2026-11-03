@@ -12,8 +12,10 @@ const composeFile = 'infra/docker-compose.local-production.yml';
 const action = process.argv[2] ?? 'up';
 
 function command(bin, args) {
+  // On Windows gcloud is installed as a gcloud.cmd shim; execFileSync cannot resolve a bare name to it.
+  const executable = process.platform === 'win32' && !/\.[a-z0-9]+$/i.test(bin) ? bin + '.cmd' : bin;
   try {
-    return execFileSync(bin, args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    return execFileSync(executable, args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   } catch {
     throw new Error('Required command failed: ' + bin + ' (check installation, login and access permissions)');
   }
