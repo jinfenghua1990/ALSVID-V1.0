@@ -74,7 +74,7 @@ export class CommerceOrderOperationsService {
     count(l.id) FILTER(WHERE l.sku_id IS NULL)::text AS unmapped_lines
    FROM commerce.external_orders o JOIN commerce.channels c ON c.id=o.channel_id
    LEFT JOIN commerce.external_order_lines l ON l.order_id=o.id
-   GROUP BY o.id,c.channel_key
+   GROUP BY o.record_id,c.channel_key
    ORDER BY o.updated_at DESC,o.id DESC LIMIT 100`);
   return r.rows.map(assessExternalOrder);
  }
