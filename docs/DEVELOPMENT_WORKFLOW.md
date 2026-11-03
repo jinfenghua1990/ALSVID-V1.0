@@ -4,7 +4,7 @@
 
 The owner confirmed cloud-only development on 2026-10-18. Reopen the same GitHub Codespace from home and company computers; use a connected cloud AI workspace for independent tasks. Do not clone, install project dependencies, build or start localhost development servers on those workstations. Documentation-only edits can use GitHub branches and PRs directly. If no cloud execution connection is available, report that limitation rather than falling back to local development. See `COLLABORATION.md`.
 
-Exception: an authorized operations node may run the opt-in local Production application described in `docs/LOCAL_PRODUCTION.md` (Docker Web/API/Gateway on loopback `127.0.0.1:8080`, sharing the Production Neon/R2/Secret Manager authority). That exception never applies to developer workstations, local code edits, a second database, or migrations.
+Exception: an authorized operations node may run the opt-in local Production application described in `docs/LOCAL_PRODUCTION.md` (Docker Web/API/Gateway on loopback `127.0.0.1:8080`, sharing the Production Neon/R2/Secret Manager authority). That exception never applies to developer workstations, local code edits, a second database, replicated business data, or migrations.
 
 ## Canonical flow
 
