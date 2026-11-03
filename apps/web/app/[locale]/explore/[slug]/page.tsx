@@ -10,9 +10,6 @@ import { PendingPurchaseActions } from "../../../_components/product/pending-pur
 import type { AccessoryCategory } from "../../../_lib/commerce/storefront-cart";
 import { Fc1ProductPage, generateFc1Metadata } from "../../../_components/product/fc1-product";
 import { Fc1StoryPage } from "../../../_components/product/fc1-story-v4";
-import { Fc2ProductPage } from "../../../_components/product/fc2-product";
-import { L7ProductPage } from "../../../_components/product/l7-product";
-import { L8ProductPage } from "../../../_components/product/l8-product";
 import { publishedProductCatalog } from "../../../_components/catalog/published-product-catalog";
 import styles from "../../../_components/home/original-home.module.css";
 

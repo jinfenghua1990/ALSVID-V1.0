@@ -1,4 +1,6 @@
-> **ALSVID 统一数字 ID 规范（负责人决定，2026-11-02）：** 业务实体只允许一套正式数字主键和数字外键；商品沿用 6 位 product_id、SKU 沿用 9 位 sku_number，不重编号；业务单号仅作展示，型号代号不得作为第二身份。所有业务新表按 `BIGINT GENERATED AS IDENTITY` 建主键。禁止继续新增 UUID 业务主键、商品编码第二生成器或永久双轨关联。**现有 UUID 仍属待迁移历史负债，不能假称已清理。** 先读 [统一数字 ID 排查与迁移标准](docs/IDENTIFIER_STANDARD_2026-11-02.md)，通过 CI 门禁后按数据回填、跨领域替换、核验与回滚完成真实迁移；不得未经验证对生产执行破坏性 DDL。
+> **2026-11-03 商品 SKU 更新决定：** 内部数值 Product/SKU 主键及关联保持稳定；新商品的面向仓储和客户的助记 SKU 使用 `A1-EBI-BLK` 等 2-3-3 形式，见根目录 [ECOMMERCE_SPEC.md](ECOMMERCE_SPEC.md)。本决定取代旧规则中“SKU 展示必须为九位数字”的部分，但不修改原数字主键、历史 SKU/订单/BOM。四个现有整车产品页 fc1、fc2、l7、l1 必须保留；纯数字公开 URL 不得作为 SEO Canonical。**
+
+> **ALSVID 统一数字 ID 规范（负责人决定，2026-11-02；数字主键部分仍有效）：** 业务实体只允许一套正式数字主键和数字外键；商品沿用 6 位 product_id、SKU 沿用 9 位 sku_number，不重编号；业务单号仅作展示，型号代号不得作为第二身份。所有业务新表按 `BIGINT GENERATED AS IDENTITY` 建主键。禁止继续新增 UUID 业务主键、商品编码第二生成器或永久双轨关联。**现有 UUID 仍属待迁移历史负债，不能假称已清理。** 先读 [统一数字 ID 排查与迁移标准](docs/IDENTIFIER_STANDARD_2026-11-02.md)，通过 CI 门禁后按数据回填、跨领域替换、核验与回滚完成真实迁移；不得未经验证对生产执行破坏性 DDL。
 
 > **Shopify removed from ALSVID runtime (owner decision, 2026-11-02):** No Shopify provider registration, webhook ingestion/replay, storefront checkout handoff or second business runtime. Do not revive archived Shopify-first plans or environment keys. Preserve existing PostgreSQL audit/order history and migrations. Refer to [Shopify retirement](docs/SHOPIFY_RETIREMENT_2026-11-02.md) and ADR 0005.
 
