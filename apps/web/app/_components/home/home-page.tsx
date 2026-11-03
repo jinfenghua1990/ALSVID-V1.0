@@ -70,7 +70,7 @@ export function HomePage({
               { code: "A1-ULTRA", name: t("product.model_fc1"), platform: t("platform.fc.title"), image: "/home/original/fc1-product.webp", alt: t("images.product"), href: detail("fc1"), modelId: productBindings?.FC1_FEATURED ?? productBindings?.FC1_HERO ?? undefined },
               { code: "L1-PRO", name: t("fc2.model"), platform: t("platform.fc.title"), image: "/products/fc2/side-studio-1536.webp", alt: t("fc2.gallery.alt.side"), href: detail("fc2"), modelId: productBindings?.FC2_LAUNCH ?? undefined },
               { code: "A1", name: t("l7.model"), platform: t("platform.fc.title"), image: "/products/l7/reference-side.jpg", alt: t("l7.gallery.side.alt"), href: detail("l7"), modelId: undefined },
-              { code: "L1", name: t("l8.model"), platform: t("platform.fc.title"), image: "/products/l8/retouched-side.webp", alt: t("l8.gallery.side.alt"), href: detail("l8"), modelId: undefined },
+              { code: "L1", name: t("l8.model"), platform: t("platform.fc.title"), image: "/products/l8/retouched-side.webp", alt: t("l8.gallery.side.alt"), href: detail("l1"), modelId: undefined },
             ].map(product => (
               <article className={styles["home-product-card"]} key={product.code} data-product-model-id={product.modelId}>
                 <a href={product.href} className={styles["home-product-image"]} aria-label={product.name}>
@@ -474,7 +474,7 @@ export function HomePage({
           <div className={styles["footer-col"]}>
             <h4>{t("footer.bikes")}</h4>
             <a href={detail("l7")}>{t("l7.model")}</a>
-            <a href={detail("l8")}>{t("l8.model")}</a>
+            <a href={detail("l1")}>{t("l8.model")}</a>
             <a href={detail("fc2")}>{t("fc2.model")}</a>
             <a href={detail("fc1")}>{t("product.model_fc1")}</a>
             <a href={detail("fc")}>{t("footer.fc")}</a>
