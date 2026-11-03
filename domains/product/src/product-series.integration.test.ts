@@ -14,7 +14,7 @@ test('FC commercial series is separate from the Folding Carbon technical platfor
    assert.notEqual(r.rows[0]?.name_en,r.rows[0]?.tech_name);
    const q = await db.query<{n:string}>(`SELECT count(*)::text AS n FROM product.models m
       LEFT JOIN product.series s ON s.series_id=m.series_id
-      WHERE m.product_type_code='BIKE' AND m.platform_id IS NOT NULL AND s.series_id IS NULL`);
+      WHERE m.product_type_code='BIKE' AND m.code IN ('A1-ULTRA','L1-PRO','A1','L1') AND s.series_id IS NULL`);
    assert.equal(q.rows[0]?.n,'0');
  } finally {await db.close();}
 });

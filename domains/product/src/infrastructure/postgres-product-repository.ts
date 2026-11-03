@@ -261,10 +261,15 @@ export class PostgresProductRepository implements ProductRepository {
     const sql = input.productTypeCode === 'BIKE'
       ? `INSERT INTO product.models(platform_id,series_id,product_type_code,code,name,description,custom_fields,created_by,updated_by,sku_prefix)
          SELECT p.id,s.series_id,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6,$9
-         FROM product.series s
-         JOIN product.platforms p ON p.id=COALESCE($1::uuid,s.default_platform_id) AND p.status='ACTIVE'
-         WHERE (($10::bigint IS NOT NULL AND s.series_id=$10::bigint) OR ($10::bigint IS NULL AND s.code=p.code))
-           AND s.status='ACTIVE' FOR UPDATE OF p,s RETURNING *`
+         FROM product.platforms p
+         LEFT JOIN product.series s ON (
+           (s.series_id=$10::bigint) OR ($10::bigint IS NULL AND s.code=p.code)
+         ) AND s.status='ACTIVE'
+         WHERE p.id=COALESCE($1::uuid,(
+           SELECT d.default_platform_id FROM product.series d WHERE d.series_id=$10::bigint AND d.status='ACTIVE'
+         ))
+           AND p.status='ACTIVE' AND ($10::bigint IS NULL OR s.series_id IS NOT NULL)
+         FOR UPDATE OF p RETURNING *`
       : `INSERT INTO product.models(platform_id,product_type_code,code,name,description,custom_fields,created_by,updated_by,sku_prefix)
          VALUES ($1,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6,$9) RETURNING *`;
     const result = await this.database.query<any>(sql,

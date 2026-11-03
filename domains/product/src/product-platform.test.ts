@@ -83,5 +83,7 @@ test('platform repository SQL has optimistic lock, archive guard and active-plat
   await repository.createModel({platformId,productTypeCode:'BIKE',code:'FC1',name:'Bike',description:'',actorUserId:writer.userId});
   assert.match(statements[0]!,/p\.version=\$2/);
   assert.match(statements[0]!,/m\.status <> 'RETIRED'/);
-  assert.match(statements[1]!,/p\.status='ACTIVE' FOR UPDATE OF p/);
+  assert.match(statements[1]!,/p\.status='ACTIVE'/);
+  assert.match(statements[1]!,/FOR UPDATE OF p/);
+  assert.match(statements[1]!,/product\.series/);
 });

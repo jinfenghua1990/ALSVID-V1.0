@@ -43,7 +43,7 @@ test('product platform labels are exclusively user-authored records', () => {
   assert.match(client, /setPlatformDraft\('new'\)/);
   assert.match(client, /按技术平台状态筛选/);
   // Product-series selection is independent of the engineering-platform manager.
-  assert.match(client, /series\.status === 'ACTIVE'/);
+  assert.match(client, /s\.status === 'ACTIVE'/);
   assert.match(client, /name="seriesId"/);
   assert.match(client, /产品系列/);
 });
