@@ -67,7 +67,7 @@ export default async function BikesPage({ params, searchParams }: Props) {
       return {id:model.id,code:model.code,platform:model.platform,name:reviewed?.title[locale]??model.name,
         status:reviewed?t("catalog.bikes.models.published"):model.status,
         image:reviewed?.image??model.image,alt:reviewed?.title[locale]??model.alt,
-        href:reviewed?prefix+"/explore/"+reviewed.productId:model.href,modelId:reviewed?.modelId,productId:reviewed?.productId,reviewed:Boolean(reviewed)};
+        href:model.href,modelId:reviewed?.modelId,productId:reviewed?.productId,reviewed:Boolean(reviewed)};
     });
   const modelSideLinks = models.map(model => ({ id: "model-" + model.id, label: model.name, href: prefix + "/bikes?platform=" + model.platform + "#model-" + model.id }));
   const filteredModels = models.filter(model => !active || model.platform === active);
