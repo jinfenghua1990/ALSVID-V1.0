@@ -237,19 +237,6 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
     return payload.data;
   }
 
-  async function deleteModelRecord(model: Model) {
-    const label = `${model.name}（${model.code}）`;
-    if (!window.confirm(`确认删除车型 ${label}？此操作不可撤销。已产生 SKU / BOM / 发布记录的车型会被拒绝，请改用“已退役”。`)) return;
-    setMessage('');
-    try {
-      await api(`/v1/product/models/${model.id}`, { method: 'DELETE', body: JSON.stringify({ expectedVersion: model.version }) });
-      setMessage(`已删除车型 ${label}`);
-      await reload();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : '删除车型失败');
-    }
-  }
-
   async function reload(): Promise<boolean> {
     setLoading(true);
     setCatalogError('');
@@ -594,7 +581,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                         <td>{variants.length ? `${variants.length} 个配置${variants.some(variant => variant.code==='DEFAULT' && variant.description.includes('尚未确认')) ? ' · 待确认' : ''}` : '未配置'}</td>
                         <td>{bomReadinessLabel(model.id,engineering.boms,engineeringError)}</td>
                         <td><span className={styles.archiveStatus} data-status={model.status}>{statusLabel(model.status)}</span></td>
-                        <td><div className={styles.tableActionGroup}><button type="button" className={styles.archiveEdit} onClick={() => openTechnicalSpecs(model)}>技术参数</button><button type="button" className={styles.archiveEdit} onClick={() => setEdit({ entity: 'model', id: model.id, version: model.version, name: model.name, status: model.status, description: model.description, productTypeCode: model.product_type_code, customFields: modelCustomFields(model.custom_fields) })}>编辑</button><button type="button" className={styles.archiveEdit} aria-label={`编辑 ${model.code} 配置版本与 SKU`} onClick={() => {setMessage('');setManageModelId(model.id);}}>版本 / SKU</button><button type="button" className={styles.archiveEdit} onClick={() => void deleteModelRecord(model)}>删除</button></div></td>
+                        <td><div className={styles.tableActionGroup}><button type="button" className={styles.archiveEdit} onClick={() => openTechnicalSpecs(model)}>技术参数</button><button type="button" className={styles.archiveEdit} onClick={() => setEdit({ entity: 'model', id: model.id, version: model.version, name: model.name, status: model.status, description: model.description, productTypeCode: model.product_type_code, customFields: modelCustomFields(model.custom_fields) })}>编辑</button><button type="button" className={styles.archiveEdit} aria-label={`编辑 ${model.code} 配置版本与 SKU`} onClick={() => {setMessage('');setManageModelId(model.id);}}>版本 / SKU</button></div></td>
                       </tr>
                     ))}</tbody>
                   </table>
