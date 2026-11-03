@@ -55,7 +55,7 @@ test('all six existing live workspaces share the embedded / legacy frame without
     assert.ok(source.includes('</OperationsFrame>'), area);
     assert.ok(!source.includes('<AppShell'), area);
     assert.ok(!source.includes('synced-screens.json'), area);
-    const layout = read(area + '/layout.tsx');
-    assert.match(layout, /requirePortalSession\('admin'/);
+    // The legacy route shell is retired; the workspace now renders only inside /admin.
+    assert.equal(existsSync(join(app, area, 'layout.tsx')), false, 'retired layout: ' + area);
   }
 });

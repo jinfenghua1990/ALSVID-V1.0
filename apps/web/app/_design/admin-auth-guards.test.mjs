@@ -7,16 +7,34 @@ import { dirname, join } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const app = join(here, '..');
 
-test('all existing legacy internal workspaces receive a server session guard', () => {
-  const internalAreas = [
-    'product', 'commerce', 'production', 'inventory', 'dealers',
-    'supply', 'finance', 'logistics', 'partners', 'vehicle360',
-    'people', 'overview', 'settings',
-  ];
-  for (const area of internalAreas) {
-    const guard = readFileSync(join(app, area, 'layout.tsx'), 'utf8');
-    assert.ok(guard.includes("requirePortalSession('admin', '/" + area + "')"), area);
+test('retired legacy internal workspaces no longer render and redirect to canonical Admin modules', () => {
+  // Retired 2026-11-03: the 14 internal workbench shells were replaced by the
+  // canonical /admin modules. Their old URLs must stay reachable through the
+  // permanent redirect map, never through a resurrected page or guard layout.
+  const retired = {
+    product: '/admin/product',
+    commerce: '/admin/ecommerce',
+    production: '/admin/production',
+    inventory: '/admin/inventory',
+    dealers: '/admin/dealers',
+    supply: '/admin/supply',
+    finance: '/admin/finance',
+    logistics: '/admin/logistics',
+    partners: '/admin/partners',
+    vehicle360: '/admin/production/vin',
+    people: '/admin/settings',
+    overview: '/admin/analytics',
+    'after-sales': '/admin/after-sales',
+    customers: '/admin/customers',
+  };
+  const nextConfig = readFileSync(join(app, '..', 'next.config.ts'), 'utf8');
+  for (const [area, destination] of Object.entries(retired)) {
+    assert.equal(existsSync(join(app, area, 'page.tsx')), false, 'legacy page removed: ' + area);
+    assert.equal(existsSync(join(app, area, 'layout.tsx')), false, 'legacy layout removed: ' + area);
+    assert.ok(nextConfig.includes(`['/${area}', '${destination}']`), 'redirect defined: ' + area);
   }
+  // Settings subroutes remain a guarded compatibility surface until they converge.
+  assert.match(readFileSync(join(app, 'settings', 'layout.tsx'), 'utf8'), /requirePortalSession\('admin'/);
 });
 
 test('retired Admin mock operations widgets stay removed, logout remains live', () => {
