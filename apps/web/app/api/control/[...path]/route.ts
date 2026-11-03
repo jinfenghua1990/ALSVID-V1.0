@@ -34,3 +34,6 @@ export const GET = proxy;
 export const POST = proxy;
 export const PATCH = proxy;
 export const PUT = proxy;
+// Without this export Next.js answers DELETE with an empty 405, which surfaces in
+// the browser as "Failed to execute 'json' on 'Response': Unexpected end of JSON input".
+export const DELETE = proxy;

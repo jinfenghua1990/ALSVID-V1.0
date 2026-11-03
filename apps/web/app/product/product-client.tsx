@@ -230,8 +230,15 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
       router.push('/login');
       throw new Error('登录状态已过期，请重新登录');
     }
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload?.message ?? '请求失败');
+    // A proxy-side rejection (e.g. an unsupported method) can return an empty body;
+    // never let JSON.parse surface a raw "Unexpected end of JSON input" to the operator.
+    const text = await response.text();
+    let payload: any = null;
+    if (text) {
+      try { payload = JSON.parse(text); } catch { payload = null; }
+    }
+    if (!response.ok) throw new Error(payload?.message ?? `请求失败（HTTP ${response.status}）`);
+    if (!payload) throw new Error(`服务返回了空响应（HTTP ${response.status}），请刷新重试`);
     return payload.data;
   }
 
