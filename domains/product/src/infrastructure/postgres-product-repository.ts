@@ -359,7 +359,10 @@ export class PostgresProductRepository implements ProductRepository {
         UNION ALL SELECT 'publication' WHERE EXISTS (SELECT 1 FROM product.catalog_publications WHERE model_id=$1)
         UNION ALL SELECT 'homepage' WHERE EXISTS (SELECT 1 FROM product.homepage_product_bindings WHERE manual_model_id=$1)
         UNION ALL SELECT 'skus' WHERE EXISTS (
-          SELECT 1 FROM product.skus s JOIN product.models m ON m.product_id=s.product_id_snapshot WHERE m.id=$1)
+          SELECT 1 FROM product.skus s JOIN product.variants v ON v.id=s.variant_id WHERE v.model_id=$1)
+        UNION ALL SELECT 'orders' WHERE EXISTS (
+          SELECT 1 FROM commerce.storefront_order_lines l
+            JOIN product.models m ON m.product_id=l.product_id_snapshot WHERE m.id=$1)
         UNION ALL SELECT 'merge_alias' WHERE EXISTS (
           SELECT 1 FROM product.model_merge_aliases a JOIN product.models m
             ON m.product_id IN (a.legacy_product_id, a.canonical_product_id) WHERE m.id=$1)

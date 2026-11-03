@@ -38,3 +38,18 @@ test('deleting requires an expected version and reports a missing model separate
   const missing = harness([], false);
   await assert.rejects(() => missing.service.deleteModel(missing.actor, 'model-1', { expectedVersion: 1 }), ProductNotFoundError);
 });
+
+test('a failed reference probe falls through to the foreign-key guard instead of throwing', async () => {
+  const audits: string[] = [];
+  const repository: any = {
+    modelDeletionBlockers: async () => { throw new Error('probe unavailable'); },
+    transaction: async (work: any) => work({ query: async () => ({ rows: [] }) }),
+    deleteModel: async () => { const error: any = new Error('fk violation'); error.code = '23503'; throw error; },
+    exists: async () => true,
+  };
+  const service = new ProductService(repository, { record: async (input: any) => { audits.push(input.action); } });
+  const actor = { userId: 'u1', permissions: [ProductCapability.Read, ProductCapability.Write] };
+  await assert.rejects(() => service.deleteModel(actor, 'model-1', { expectedVersion: 1 }),
+    (error: any) => error instanceof ProductConflictError && /已退役/.test(error.message));
+  assert.deepEqual(audits, []);
+});

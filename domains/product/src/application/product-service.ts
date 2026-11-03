@@ -245,23 +245,32 @@ export class ProductService {
     requireCapability(actor, ProductCapability.Write);
     if (!input || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1)
       throw new ProductValidationError('expectedVersion is required');
-    const blockers = await this.repository.modelDeletionBlockers(id);
+    // Never turn an unexpected reference probe failure into a 500: fall back to the
+    // database foreign keys, which still refuse the delete and map to a conflict below.
+    let blockers: string[] = [];
+    try { blockers = await this.repository.modelDeletionBlockers(id); } catch { blockers = []; }
     if (blockers.length) {
       const label: Record<string, string> = {
         variants: '配置版本', bom: 'BOM', publication: '官网发布记录', homepage: '首页绑定',
-        skus: 'SKU', merge_alias: '历史合并别名',
+        skus: 'SKU', orders: '商城订单', merge_alias: '历史合并别名',
       };
       throw new ProductConflictError(
         `该车型已有${blockers.map(reason => label[reason] ?? reason).join('、')}，不能删除；请改为把状态设为“已退役”`);
     }
-    await this.repository.transaction(async executor => {
-      const deleted = await this.repository.deleteModel({ id, expectedVersion: input.expectedVersion, actorUserId: actor.userId });
-      if (!deleted) {
-        if (!await this.repository.exists('model', id)) throw new ProductNotFoundError('Model not found');
-        throw new ProductConflictError('Model changed since it was loaded; refresh and retry');
-      }
-      await this.audit.record({ actorUserId: actor.userId, action: 'product.model_deleted', targetType: 'product.model', targetId: id, metadata: { expectedVersion: input.expectedVersion } }, executor);
-    });
+    try {
+      await this.repository.transaction(async executor => {
+        const deleted = await this.repository.deleteModel({ id, expectedVersion: input.expectedVersion, actorUserId: actor.userId });
+        if (!deleted) {
+          if (!await this.repository.exists('model', id)) throw new ProductNotFoundError('Model not found');
+          throw new ProductConflictError('Model changed since it was loaded; refresh and retry');
+        }
+        await this.audit.record({ actorUserId: actor.userId, action: 'product.model_deleted', targetType: 'product.model', targetId: id, metadata: { expectedVersion: input.expectedVersion } }, executor);
+      });
+    } catch (error) {
+      if (postgresErrorCode(error) === '23503')
+        throw new ProductConflictError('该车型仍被 SKU、BOM 或订单引用，不能删除；请改为把状态设为“已退役”');
+      throw error;
+    }
     return { deleted: true };
   }
 
