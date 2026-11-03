@@ -12,8 +12,13 @@ const composeFile = 'infra/docker-compose.local-production.yml';
 const action = process.argv[2] ?? 'up';
 
 function command(bin, args) {
+  // Windows installs gcloud as a gcloud.cmd shim, and Node refuses to spawn .cmd without a shell
+  // (CVE-2024-27980), so run it through cmd.exe instead of resolving the bare name ourselves.
+  const windows = process.platform === 'win32';
+  const executable = windows ? process.env.ComSpec || 'cmd.exe' : bin;
+  const argv = windows ? ['/d', '/s', '/c', bin, ...args] : args;
   try {
-    return execFileSync(bin, args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+    return execFileSync(executable, argv, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   } catch {
     throw new Error('Required command failed: ' + bin + ' (check installation, login and access permissions)');
   }
