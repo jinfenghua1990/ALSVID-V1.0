@@ -50,6 +50,15 @@ async function buildSpec(db: Database, released = true): Promise<{ specId: strin
     `INSERT INTO engineering.bom_revisions(bom_id,revision_code) VALUES ($1,'A') RETURNING id`,
     [bom.rows[0]!.id],
   );
+  // A production fixture must have at least one actual BOM line before release.
+  const part = await db.query<{ id: string }>(
+    `INSERT INTO engineering.parts(part_number,name) VALUES ($1,'Fixture frame') RETURNING id`,
+    [`P${code}`],
+  );
+  await db.query(
+    `INSERT INTO engineering.bom_lines(revision_id,line_no,part_id,quantity) VALUES ($1,1,$2,1)`,
+    [revision.rows[0]!.id,part.rows[0]!.id],
+  );
   await db.query(`UPDATE engineering.bom_revisions SET status='RELEASED',released_at=now() WHERE id=$1`, [revision.rows[0]!.id]);
   const spec = await db.query<{ id: string }>(
     `INSERT INTO engineering.build_specs(code,sku_id,bom_revision_id,status,released_at)
