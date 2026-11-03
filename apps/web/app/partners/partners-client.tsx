@@ -33,6 +33,9 @@ export default function PartnersClient({ embedded = false, scope = 'all' }: { em
   const [createOpen, setCreateOpen] = useState(false);
   const [createRole, setCreateRole] = useState<Role>('SUPPLIER');
   const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [factoryOptions, setFactoryOptions] = useState<Partner[]>([]);
+  const [linkedFactories, setLinkedFactories] = useState<string[]>([]);
+  const [linkMessage, setLinkMessage] = useState('');
 
   async function api(path: string, init?: RequestInit) {
     const headers = new Headers(init?.headers);
@@ -62,12 +65,43 @@ export default function PartnersClient({ embedded = false, scope = 'all' }: { em
   }
 
   useEffect(() => { void load(); }, []);
+
+  async function loadFactories() {
+    try {
+      const rows: unknown = await api('/api/partners?role=FACTORY');
+      setFactoryOptions(Array.isArray(rows) ? rows as Partner[] : []);
+    } catch {
+      setFactoryOptions([]);
+    }
+  }
+
+  useEffect(() => { if (isSupply) void loadFactories(); }, [isSupply]);
   const displayedPartners = useMemo(() => isSupply ? partners.filter((partner) => partner.roles.some((role) => role === 'SUPPLIER' || role === 'FACTORY' || role === 'LOGISTICS_PROVIDER')) : partners, [partners, isSupply]);
   const counts = useMemo(() => allRoles.map((role) => [role, partners.filter((partner) => partner.roles.includes(role)).length] as const), [partners]);
 
   async function openPartner(id: string) {
     setMessage('');
-    try { setSelected(await api(`/api/partners/${id}`)); } catch (error) { setMessage(error instanceof Error ? error.message : '无法加载合作伙伴详情'); }
+    setLinkMessage('');
+    try {
+      const detail = await api(`/api/partners/${id}`) as PartnerDetail;
+      setSelected(detail);
+      if (detail.roles.includes('SUPPLIER')) {
+        const links: unknown = await api(`/api/partners/${id}/factories`);
+        setLinkedFactories(Array.isArray(links) ? (links as Array<{ factoryId: string }>).map(link => link.factoryId) : []);
+      } else {
+        setLinkedFactories([]);
+      }
+    } catch (error) { setMessage(error instanceof Error ? error.message : '无法加载合作伙伴详情'); }
+  }
+
+  async function saveFactoryLinks() {
+    if (!selected) return;
+    setLinkMessage('');
+    try {
+      const links: unknown = await api(`/api/partners/${selected.id}/factories`, { method: 'PUT', body: JSON.stringify({ factoryIds: linkedFactories }) });
+      setLinkedFactories(Array.isArray(links) ? (links as Array<{ factoryId: string }>).map(link => link.factoryId) : []);
+      setLinkMessage('工厂关联已保存。');
+    } catch (error) { setLinkMessage(error instanceof Error ? error.message : '无法保存工厂关联'); }
   }
 
   async function createPartner(event: FormEvent<HTMLFormElement>) {
@@ -96,6 +130,7 @@ export default function PartnersClient({ embedded = false, scope = 'all' }: { em
       });
       setCreateOpen(false);
       await load(query);
+      if (isSupply) await loadFactories();
       setSelected(created);
     } catch (error) { setMessage(error instanceof Error ? error.message : '无法创建合作伙伴'); }
   }
@@ -155,6 +190,14 @@ export default function PartnersClient({ embedded = false, scope = 'all' }: { em
               <label>法定名称<input name="legalName" defaultValue={selected.legalName ?? ''} /></label>
               <div className="split"><label>国家 / 地区<input name="countryCode" maxLength={2} defaultValue={selected.countryCode ?? ''} /></label><label>状态<select name="status" defaultValue={selected.status}><option value="ACTIVE">启用</option><option value="INACTIVE">停用</option></select></label></div>
               <fieldset><legend>业务角色</legend><div className="checkGrid">{allRoles.map((role) => <label key={role}><input type="checkbox" name={role} defaultChecked={selected.roles.includes(role)} />{roleLabels[role]}</label>)}</div></fieldset>
+              {selected.roles.includes('SUPPLIER') ? <fieldset>
+                <legend>关联工厂</legend>
+                {factoryOptions.length ? <div className="checkGrid">{factoryOptions.map((factory) => <label key={factory.id}><input type="checkbox" checked={linkedFactories.includes(factory.id)} onChange={(event) => setLinkedFactories((current) => event.target.checked ? [...current, factory.id] : current.filter((id) => id !== factory.id))} />{factory.displayName}<small>{factory.countryCode ?? ''}</small></label>)}</div> : <small>尚无工厂档案，请先新建工厂。</small>}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                  <button type="button" className="primaryButton" onClick={() => void saveFactoryLinks()}>保存工厂关联</button>
+                  {linkMessage ? <small role="status">{linkMessage}</small> : null}
+                </div>
+              </fieldset> : null}
               <section className="factBlock"><span>业务标识</span>{selected.identifiers.length ? selected.identifiers.map((item) => <p key={item.id}><b>{item.scheme}</b>{item.value}</p>) : <small>暂无记录</small>}</section>
               <section className="factBlock"><span>联系方式</span>{selected.contacts.length ? selected.contacts.map((item) => <p key={item.id}><b>{item.purpose} · {item.type}</b>{item.value}</p>) : <small>暂无记录</small>}</section>
               <section className="factBlock"><span>地址</span>{selected.addresses.length ? selected.addresses.map((item) => <p key={item.id}><b>{item.purpose}</b>{[item.line1, item.city, item.postalCode, item.countryCode].filter(Boolean).join(', ')}</p>) : <small>暂无记录</small>}</section>

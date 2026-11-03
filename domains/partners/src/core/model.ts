@@ -10,3 +10,5 @@ export interface PartnerSummary{id:string;partnerCode:string;kind:PartnerKind;di
 export interface PartnerDetail extends PartnerSummary{identifiers:Array<{id:string;scheme:string;value:string}>;contacts:Array<{id:string;type:string;purpose:string;value:string;isPrimary:boolean}>;addresses:Array<{id:string;purpose:string;recipient:string|null;line1:string;line2:string|null;city:string;region:string|null;postalCode:string|null;countryCode:string}>}
 export interface PartnerActor{userId:string;permissions:readonly string[]}
 export const PartnerCapability={Read:'partner.read',Write:'partner.write',RoleManage:'partner.role.manage'} as const;
+/** A factory is an independent FACTORY Partner linked to one or more suppliers. */
+export interface PartnerFactoryLink{id:string;factoryId:string;factoryCode:string;displayName:string;countryCode:string|null;status:'ACTIVE'|'INACTIVE'}
