@@ -114,7 +114,7 @@ try {
         assert.equal(await navLinks.nth(0).getAttribute('href'), '/' + locale + '/explore/fc1', 'FC1 must come before FC2');
         assert.equal(await navLinks.nth(1).getAttribute('href'), '/' + locale + '/explore/fc2', 'FC2 model links to its own page');
         assert.equal(await navLinks.nth(2).getAttribute('href'), '/' + locale + '/explore/l7', 'L7 has a global model entry');
-        assert.equal(await navLinks.nth(3).getAttribute('href'), '/' + locale + '/explore/l8', 'L8 has a global model entry');
+        assert.equal(await navLinks.nth(3).getAttribute('href'), '/' + locale + '/explore/l1', 'L8 has a global model entry');
         assert.equal(await navLinks.nth(4).getAttribute('href'), '/' + locale + '/bikes', 'Products link to bicycle catalog');
         assert.equal(await navLinks.nth(5).getAttribute('href'), '/' + locale + '/dealers', 'Dealers follow the unified product center');
         const dealerLabel = { de: 'Händler weltweit', en: 'Global dealers', zh: '全球经销商' }[locale];
@@ -155,7 +155,7 @@ try {
         assert.equal(await bicycles.locator('a[href="/' + locale + '/explore/fc1"]').count() > 0, true, 'FC1 detail link exists');
         assert.equal(await bicycles.locator('a[href="/' + locale + '/explore/fc2"]').count() > 0, true, 'FC2 detail link exists');
         assert.equal(await bicycles.locator('a[href="/' + locale + '/explore/l7"]').count() > 0, true, 'L7 detail link exists');
-        assert.equal(await bicycles.locator('a[href="/' + locale + '/explore/l8"]').count() > 0, true, 'L8 detail link exists');
+        assert.equal(await bicycles.locator('a[href="/' + locale + '/explore/l1"]').count() > 0, true, 'L8 detail link exists');
         assert.equal(await bicycles.locator('#models article').count(), 4, 'The catalogue includes FC1, FC2, L7 and L8 model previews');
         const quickModels=bicycles.locator('nav[data-bikes-quick-models]');
         assert.equal(await quickModels.count(),1,'Bike catalogue includes the model image shortcut strip');
@@ -383,7 +383,7 @@ try {
           assert.equal(await modelLinks.nth(0).getAttribute('href'), '/' + locale + '/explore/fc1');
           assert.equal(await modelLinks.nth(1).getAttribute('href'), '/' + locale + '/explore/fc2');
           assert.equal(await modelLinks.nth(2).getAttribute('href'), '/' + locale + '/explore/l7');
-          assert.equal(await modelLinks.nth(3).getAttribute('href'), '/' + locale + '/explore/l8');
+          assert.equal(await modelLinks.nth(3).getAttribute('href'), '/' + locale + '/explore/l1');
           assert.equal(await modelLinks.nth(0).locator('span').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(184, 233, 134)');
           assert.equal(await modelLinks.nth(1).locator('span').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(230, 83, 75)');
           const headerBox = await root.locator('header').first().boundingBox();

@@ -28,7 +28,7 @@ export function PublicSiteHeader({
     { href: prefix + '/explore/fc1', label: t('product.model_fc1'), id: 'fc1', badge: t('navigation.reserve_badge') },
     { href: prefix + '/explore/fc2', label: t('fc2.model'), id: 'fc2', badge: t('product.new_badge') },
     { href: prefix + '/explore/l7', label: t('l7.model'), id: 'l7' },
-    { href: prefix + '/explore/l8', label: t('l8.model'), id: 'l8' },
+    { href: prefix + '/explore/l1', label: t('l8.model'), id: 'l8' },
     { href: prefix + '/bikes', label: t('navigation.products'), id: 'bikes' },
     { href: prefix + '/dealers', label: t('navigation.global_dealers'), id: 'dealers' },
     { href: myUrl, label: t('network.nav.owner'), id: 'owner' },
