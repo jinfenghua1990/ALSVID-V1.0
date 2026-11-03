@@ -7,8 +7,8 @@ function harness(options: { recycled?: boolean; exists?: boolean } = {}) {
   const events: string[] = [];
   const recycled = options.recycled ?? false;
   const repository: any = {
-    recycleModel: async (input: any) => { if (recycled) return false; events.push(`recycle:${input.id}`); return true; },
-    restoreModel: async (input: any) => { if (!recycled) return false; events.push(`restore:${input.id}`); return true; },
+    recycleModel: async (input: any) => { if (recycled || options.exists === false) return false; events.push(`recycle:${input.id}`); return true; },
+    restoreModel: async (input: any) => { if (!recycled || options.exists === false) return false; events.push(`restore:${input.id}`); return true; },
     listRecycledModels: async () => [{ id: 'model-1', productId: '100123', code: 'X1', name: 'Recycled', status: 'ACTIVE', version: 2, deletedAt: '2026-11-03T00:00:00.000Z', deletedBy: null }],
     exists: async () => options.exists ?? true,
   };
