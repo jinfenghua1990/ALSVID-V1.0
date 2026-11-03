@@ -92,6 +92,11 @@ export class ProductController {
     return {data:await productService.deleteModelField(requireAuth(request),id,input)};
   }
 
+  @Delete('models/:id')
+  async deleteModel(@Req() request:AuthenticatedRequest,@Param('id') id:string,@Body() input:{expectedVersion?:number}) {
+    return {data:await productService.deleteModel(requireAuth(request),id,{expectedVersion:Number(input?.expectedVersion)})};
+  }
+
   @Post('platforms')
   async createPlatform(@Req() request: AuthenticatedRequest, @Body() input: CreatePlatformBody) {
     return { data: await productService.createPlatform(requireAuth(request), input) };
