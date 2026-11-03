@@ -1,5 +1,5 @@
 import type { DatabasePort, QueryExecutor } from '@alsvid/database';
-import type { HomepageBinding, ModelFieldDefinition, PlatformRow, ProductCatalog, ProductEntityKind } from '../core/model.js';
+import type { HomepageBinding, ModelFieldDefinition, PlatformRow, ProductCatalog, ProductEntityKind, RecycledModel } from '../core/model.js';
 import type { CatalogPublishAssetRow,PublicationRow, PublicationDraft, PublicationStatus } from '../core/publication.js';
 import type { CreateModelRecord, CreatePlatformRecord, CreateSkuRecord, CreateVariantRecord, ProductRepository, UpdatePlatformRecord, UpdateProductRecord } from '../application/ports.js';
 
@@ -14,9 +14,9 @@ export class PostgresProductRepository implements ProductRepository {
     const [platforms, series, models, variants, skus, productTypes,modelFieldDefs] = await Promise.all([
       this.database.query<any>('SELECT id, code, name, description, status, version, created_at, updated_at FROM product.platforms ORDER BY code'),
       this.database.query<any>('SELECT series_id AS id,code,name_zh,name_en,status,default_platform_id FROM product.series ORDER BY code'),
-      this.database.query<any>('SELECT id, product_id, platform_id, series_id, product_type_code, code, sku_prefix, name, description, custom_fields, status, version, created_at, updated_at FROM product.models m WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=m.product_id) ORDER BY code'),
-      this.database.query<any>('SELECT id, model_id, code, name, description, attributes, status, version, created_at, updated_at FROM product.variants v WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=v.product_id) ORDER BY code'),
-      this.database.query<any>('SELECT id, product_id, sku_number, sku_sequence, variant_id, sku, name, market_code, color_code, size_code, attributes, status, version, created_at, updated_at FROM product.skus s WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=s.product_id) ORDER BY sku'),
+      this.database.query<any>('SELECT id, product_id, platform_id, series_id, product_type_code, code, sku_prefix, name, description, custom_fields, status, version, created_at, updated_at FROM product.models m WHERE m.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=m.product_id) ORDER BY code'),
+      this.database.query<any>('SELECT id, model_id, code, name, description, attributes, status, version, created_at, updated_at FROM product.variants v WHERE NOT EXISTS (SELECT 1 FROM product.models dm WHERE dm.id=v.model_id AND dm.deleted_at IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=v.product_id) ORDER BY code'),
+      this.database.query<any>('SELECT id, product_id, sku_number, sku_sequence, variant_id, sku, name, market_code, color_code, size_code, attributes, status, version, created_at, updated_at FROM product.skus s WHERE NOT EXISTS (SELECT 1 FROM product.variants dv JOIN product.models dm ON dm.id=dv.model_id WHERE dv.id=s.variant_id AND dm.deleted_at IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=s.product_id) ORDER BY sku'),
       this.database.query<any>('SELECT code,name,description,status FROM product.product_types ORDER BY code'),
       this.modelFieldDefinitions(),
     ]);
@@ -166,7 +166,7 @@ export class PostgresProductRepository implements ProductRepository {
       p.status,p.title_zh,p.title_de,p.title_en,p.image_path,p.evidence_note,
       p.version,p.submitted_at,p.published_at,p.withdrawn_at
     FROM product.catalog_publications p
-    JOIN product.models m ON m.id=p.model_id`;
+    JOIN product.models m ON m.id=p.model_id AND m.deleted_at IS NULL`;
 
   async publications(): Promise<PublicationRow[]> {
     const result = await this.database.query<PublicationRow>(
@@ -188,7 +188,7 @@ export class PostgresProductRepository implements ProductRepository {
       SELECT m.code FROM product.catalog_publications p
       JOIN product.models m ON m.id=p.model_id
       WHERE p.published_at IS NOT NULL
-        AND (p.status<>'PUBLISHED' OR m.status<>'ACTIVE')
+        AND (p.status<>'PUBLISHED' OR m.status<>'ACTIVE' OR m.deleted_at IS NOT NULL)
         AND m.code IN ('A1-ULTRA','L1-PRO','A1','L1')`);
     return result.rows.map(row=>row.code);
   }
@@ -374,5 +374,31 @@ export class PostgresProductRepository implements ProductRepository {
     const result = await this.database.query(
       'DELETE FROM product.models WHERE id=$1 AND version=$2 RETURNING id', [input.id, input.expectedVersion]);
     return Boolean(result.rows[0]);
+  }
+
+  /** Move a model into the recycle bin without touching any dependent record. */
+  async recycleModel(input: { id: string; expectedVersion: number; actorUserId: string }): Promise<boolean> {
+    const result = await this.database.query(
+      `UPDATE product.models SET deleted_at=now(), deleted_by=$3, version=version+1, updated_by=$3, updated_at=now()
+       WHERE id=$1 AND version=$2 AND deleted_at IS NULL RETURNING id`, [input.id, input.expectedVersion, input.actorUserId]);
+    return Boolean(result.rows[0]);
+  }
+
+  /** Bring a recycled model back into the working catalogue. */
+  async restoreModel(input: { id: string; actorUserId: string }): Promise<boolean> {
+    const result = await this.database.query(
+      `UPDATE product.models SET deleted_at=NULL, deleted_by=NULL, version=version+1, updated_by=$2, updated_at=now()
+       WHERE id=$1 AND deleted_at IS NOT NULL RETURNING id`, [input.id, input.actorUserId]);
+    return Boolean(result.rows[0]);
+  }
+
+  async listRecycledModels(): Promise<RecycledModel[]> {
+    const result = await this.database.query<any>(
+      `SELECT id, product_id, code, name, status, version, deleted_at, deleted_by
+       FROM product.models WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC LIMIT 200`);
+    return result.rows.map((row: any): RecycledModel => ({
+      id: row.id, productId: String(row.product_id), code: row.code, name: row.name,
+      status: row.status, version: row.version, deletedAt: row.deleted_at.toISOString(), deletedBy: row.deleted_by ?? null,
+    }));
   }
 }
