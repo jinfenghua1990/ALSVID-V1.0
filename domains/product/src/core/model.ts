@@ -79,3 +79,5 @@ export interface ProductCatalog {
   variants: VariantRow[];
   skus: SkuRow[];
 }
+/** A product that was removed from the working catalogue but is still recoverable. */
+export interface RecycledModel{id:string;productId:string;code:string;name:string;status:string;version:number;deletedAt:string;deletedBy:string|null}

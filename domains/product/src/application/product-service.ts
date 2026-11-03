@@ -1,7 +1,7 @@
 import { ForbiddenError } from '@alsvid/kernel';
 import { postgresErrorCode } from '@alsvid/database';
 import { ProductConflictError, ProductNotFoundError, ProductValidationError } from '../core/errors.js';
-import { ProductCapability, type HomepageBinding, type HomepageBindingMode, type HomepageSlotCode, type ModelFieldDefinition, type CustomFieldType, type CustomFieldValue, type ProductCatalog, type ProductEntityKind, type ProductStatus, type ProductTypeCode } from '../core/model.js';
+import { ProductCapability, type HomepageBinding, type HomepageBindingMode, type HomepageSlotCode, type ModelFieldDefinition, type CustomFieldType, type CustomFieldValue, type ProductCatalog, type RecycledModel, type ProductEntityKind, type ProductStatus, type ProductTypeCode } from '../core/model.js';
 import { normalizeProductCode, normalizeProductCountry, normalizeSkuDimension, normalizeMnemonicSku, normalizeMnemonicPrefix } from '../core/normalization.js';
 import {approvedCatalogAssets,mergeCatalogAssets,assertPublicationTransition,curatedCatalogImage,toPublicCatalogItem,validatePublicationDraft,type PublicationAction,type PublicationDraft} from '../core/publication.js';
 import type { ProductActor, ProductAuditPort, ProductRepository } from './ports.js';
@@ -272,6 +272,38 @@ export class ProductService {
       throw error;
     }
     return { deleted: true };
+  }
+
+  /** Move a product into the recycle bin: history stays, the working catalogue drops it. */
+  async recycleModel(actor: ProductActor, id: string, input: { expectedVersion: number }): Promise<{ recycled: true }> {
+    requireCapability(actor, ProductCapability.Write);
+    if (!input || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1)
+      throw new ProductValidationError('expectedVersion is required');
+    const recycled = await this.repository.recycleModel({ id, expectedVersion: input.expectedVersion, actorUserId: actor.userId });
+    if (!recycled) {
+      if (!await this.repository.exists('model', id)) throw new ProductNotFoundError('Model not found');
+      throw new ProductConflictError('商品已在回收站，或已被他人修改；请刷新后重试');
+    }
+    await this.audit.record({ actorUserId: actor.userId, action: 'product.model_recycled', targetType: 'product.model', targetId: id, metadata: { expectedVersion: input.expectedVersion } });
+    return { recycled: true };
+  }
+
+  /** Bring a recycled product back into the working catalogue. */
+  async restoreModel(actor: ProductActor, id: string): Promise<{ restored: true }> {
+    requireCapability(actor, ProductCapability.Write);
+    const restored = await this.repository.restoreModel({ id, actorUserId: actor.userId });
+    if (!restored) {
+      if (!await this.repository.exists('model', id)) throw new ProductNotFoundError('Model not found');
+      throw new ProductConflictError('该商品不在回收站中');
+    }
+    await this.audit.record({ actorUserId: actor.userId, action: 'product.model_restored', targetType: 'product.model', targetId: id, metadata: {} });
+    return { restored: true };
+  }
+
+  /** Products waiting in the recycle bin. */
+  async listRecycled(actor: ProductActor): Promise<RecycledModel[]> {
+    requireCapability(actor, ProductCapability.Read);
+    return this.repository.listRecycledModels();
   }
 
   async deleteModelField(actor: ProductActor,id:string,input:{expectedVersion:number}):Promise<ModelFieldDefinition & {affectedModels:number}> {

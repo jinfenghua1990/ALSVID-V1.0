@@ -92,9 +92,26 @@ export class ProductController {
     return {data:await productService.deleteModelField(requireAuth(request),id,input)};
   }
 
+  /** Removing a product from the catalogue only moves it to the recycle bin. */
   @Delete('models/:id')
-  async deleteModel(@Req() request:AuthenticatedRequest,@Param('id') id:string,@Body() input:{expectedVersion?:number}) {
+  async recycleModel(@Req() request:AuthenticatedRequest,@Param('id') id:string,@Body() input:{expectedVersion?:number}) {
+    return {data:await productService.recycleModel(requireAuth(request),id,{expectedVersion:Number(input?.expectedVersion)})};
+  }
+
+  @Post('models/:id/restore')
+  async restoreModel(@Req() request:AuthenticatedRequest,@Param('id') id:string) {
+    return {data:await productService.restoreModel(requireAuth(request),id)};
+  }
+
+  /** Permanent removal, only reachable from the recycle bin and only without references. */
+  @Delete('models/:id/purge')
+  async purgeModel(@Req() request:AuthenticatedRequest,@Param('id') id:string,@Body() input:{expectedVersion?:number}) {
     return {data:await productService.deleteModel(requireAuth(request),id,{expectedVersion:Number(input?.expectedVersion)})};
+  }
+
+  @Get('recycle-bin')
+  async recycleBin(@Req() request:AuthenticatedRequest) {
+    return {data:await productService.listRecycled(requireAuth(request))};
   }
 
   @Post('platforms')

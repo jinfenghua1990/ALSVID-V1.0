@@ -16,6 +16,7 @@ type Summary = { skus: { id: string; sku: string; name: string; modelCode: strin
 type Stock = { item_kind: string; sku_id: string | null; sku: string | null; sku_name: string | null; warehouse_code: string; warehouse_name: string; location_code: string; on_hand: string; reserved: string; available: string; frame_number: string | null };
 type ProductData = { catalog: Catalog; publications: Publication[]; summary: Summary; inventory: Stock[]; permissions: string[] | null };
 type ProductRowData = { model: Model; publication: Publication | undefined; platform: Platform | undefined; skus: Sku[]; prices: Price[]; stock: Stock[] };
+type RecycledItem = { id: string; productId: string; code: string; name: string; status: string; version: number; deletedAt: string; deletedBy: string | null };
 type Filters = { id: string; code: string; sku: string; name: string; type: string; market: string; platform: string; stock: string; from: string; to: string; priceState: string; updatedWithin: string };
 
 const publicationLabel: Record<string, string> = { UNLISTED: '未建立发布记录', DRAFT: '草稿', IN_REVIEW: '待审核', PUBLISHED: '已上架', WITHDRAWN: '已下架' };
@@ -95,6 +96,8 @@ export function EcommerceProductWorkspace() {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [failures, setFailures] = useState<string[]>([]);
+  const [recycled, setRecycled] = useState<RecycledItem[]>([]);
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
 
   async function load() {
     setState('loading');
@@ -269,6 +272,81 @@ export function EcommerceProductWorkspace() {
     setBusy(false);
   }
 
+  async function loadRecycleBin() {
+    try {
+      const rows = await readApi<RecycledItem[]>('/api/control/v1/product/recycle-bin');
+      setRecycled(Array.isArray(rows) ? rows : []);
+    } catch {
+      setRecycled([]);
+    }
+  }
+
+  async function recycleProduct(model: Model) {
+    if (!window.confirm(`确认删除商品「${model.name}（${model.code}）」吗？
+
+删除后商品进入回收站，订单、价格、库存和发布记录都会保留，可随时还原。`)) return;
+    setBusy(true);
+    setFeedback('');
+    setFailures([]);
+    try {
+      await fetch(`/api/control/v1/product/models/${encodeURIComponent(model.id)}`, {
+        method: 'DELETE', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ expectedVersion: model.version }),
+      }).then(async response => {
+        const payload = await response.json().catch(() => null) as { message?: string } | null;
+        if (!response.ok) throw new Error(payload?.message ?? '删除商品失败');
+      });
+      setFeedback(`商品「${model.name}」已移入回收站，可在回收站还原或彻底删除。`);
+      await load();
+      await loadRecycleBin();
+    } catch (reason) {
+      setFailures([reason instanceof Error ? reason.message : '删除商品失败']);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function restoreProduct(item: RecycledItem) {
+    setBusy(true);
+    setFailures([]);
+    try {
+      const response = await fetch(`/api/control/v1/product/models/${encodeURIComponent(item.id)}/restore`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+      });
+      const payload = await response.json().catch(() => null) as { message?: string } | null;
+      if (!response.ok) throw new Error(payload?.message ?? '还原商品失败');
+      setFeedback(`商品「${item.name}」已还原回商城商品列表。`);
+      await load();
+      await loadRecycleBin();
+    } catch (reason) {
+      setFailures([reason instanceof Error ? reason.message : '还原商品失败']);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function purgeProduct(item: RecycledItem) {
+    if (!window.confirm(`彻底删除商品「${item.name}（${item.code}）」？
+
+此操作不可撤销；仍被 SKU、BOM、订单或发布记录引用的商品会被拒绝。`)) return;
+    setBusy(true);
+    setFailures([]);
+    try {
+      const response = await fetch(`/api/control/v1/product/models/${encodeURIComponent(item.id)}/purge`, {
+        method: 'DELETE', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ expectedVersion: item.version }),
+      });
+      const payload = await response.json().catch(() => null) as { message?: string } | null;
+      if (!response.ok) throw new Error(payload?.message ?? '彻底删除失败');
+      setFeedback(`商品「${item.name}」已彻底删除。`);
+      await loadRecycleBin();
+    } catch (reason) {
+      setFailures([reason instanceof Error ? reason.message : '彻底删除失败']);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function exportRows() {
     if (!data) return;
     const source = selectedIds.size > 0 ? selectedRows : rows;
@@ -336,6 +414,7 @@ export function EcommerceProductWorkspace() {
       <h1>商城商品列表</h1>
       <div className={styles.actions}>
         <button className="av-btn" type="button" onClick={() => void load()} disabled={busy}>刷新</button>
+        <button className="av-btn" type="button" aria-expanded={showRecycleBin} onClick={() => { const next = !showRecycleBin; setShowRecycleBin(next); if (next) void loadRecycleBin(); }}>回收站{recycled.length ? `（${recycled.length}）` : ''}</button>
         <a className="av-btn" data-variant="primary" href="/admin/product?type=BIKE#vehicle-models">从产品中心新增</a>
       </div>
     </header>
@@ -378,15 +457,28 @@ export function EcommerceProductWorkspace() {
       <div className={`av-tablewrap ${styles.tableWrap}`}>
         <table className={`av-table ${styles.table}`}>
           <thead><tr><th><input type="checkbox" aria-label="选择当前全部商品" checked={allSelected} onChange={toggleAll} disabled={!rows.length || busy} /></th><th>商品信息</th><th>类型 / 技术平台</th><th>SKU</th><th>市场 / 启用价格</th><th>仓内总库存</th><th>B2C 可用库存</th><th>发布状态</th><th>创建时间</th><th>操作</th></tr></thead>
-          <tbody>{rows.length ? rows.map(row => <ProductRow key={row.model.id} row={row} market={filters.market} onSelect={selectModel} chosen={row.model.id === selectedId} checked={selectedIds.has(row.model.id)} toggle={toggle} busy={busy} />) : <tr><td colSpan={10} className={styles.empty}>没有符合筛选条件的商品</td></tr>}</tbody>
+          <tbody>{rows.length ? rows.map(row => <ProductRow key={row.model.id} row={row} market={filters.market} onSelect={selectModel} chosen={row.model.id === selectedId} checked={selectedIds.has(row.model.id)} toggle={toggle} busy={busy} onRecycle={recycleProduct} />) : <tr><td colSpan={10} className={styles.empty}>没有符合筛选条件的商品</td></tr>}</tbody>
         </table>
       </div>
     </section>
+    {showRecycleBin ? <section className="av-card" aria-label="商品回收站">
+      <div className="av-cardhead"><div><p className="av-eyebrow">RECYCLE BIN</p><h2 className="av-cardtitle">商品回收站</h2><p className="av-cardhint">删除的商品保留在这里，订单、价格、库存与发布记录都不受影响，可以还原回商城商品列表。</p></div><button className="av-btn" type="button" onClick={() => void loadRecycleBin()} disabled={busy}>刷新回收站</button></div>
+      {recycled.length ? <div className="av-tablewrap"><table className="av-table">
+        <thead><tr><th>商品</th><th>数字商品 ID</th><th>状态</th><th>删除时间</th><th>操作</th></tr></thead>
+        <tbody>{recycled.map(item => <tr key={item.id}>
+          <td><strong>{item.name}</strong><span className="av-table-subtext">{item.code}</span></td>
+          <td>{item.productId}</td>
+          <td>{item.status}</td>
+          <td>{date(item.deletedAt)}</td>
+          <td><div className={styles.rowActions}><button type="button" onClick={() => void restoreProduct(item)} disabled={busy}>还原</button><button type="button" onClick={() => void purgeProduct(item)} disabled={busy}>彻底删除</button></div></td>
+        </tr>)}</tbody>
+      </table></div> : <p className="av-cardhint">回收站是空的。</p>}
+    </section> : null}
     {selected ? <ProductConfiguration model={selected} data={data} onChange={load} onPriceChange={refreshPrices} /> : null}
   </div>;
 }
 
-function ProductRow({ row, market, onSelect, chosen, checked, toggle, busy }: { row: ProductRowData; market: string; onSelect: (id: string) => void; chosen: boolean; checked: boolean; toggle: (id: string) => void; busy: boolean }) {
+function ProductRow({ row, market, onSelect, chosen, checked, toggle, busy, onRecycle }: { row: ProductRowData; market: string; onSelect: (id: string) => void; chosen: boolean; checked: boolean; toggle: (id: string) => void; busy: boolean; onRecycle: (model: Model) => void }) {
   const { model, publication, skus, stock, platform } = row;
   const prices = market === 'ALL' ? row.prices : row.prices.filter(price => price.marketCountry === market);
   const available = stockTotal(stock);
@@ -407,7 +499,7 @@ function ProductRow({ row, market, onSelect, chosen, checked, toggle, busy }: { 
     <td>未接入<span className="av-table-subtext">渠道预留尚未核算</span></td>
     <td><span className="av-tag" data-tone={publication?.status === 'PUBLISHED' ? 'good' : publication?.status === 'IN_REVIEW' ? 'warn' : undefined}>{publication ? publicationLabel[publication.status] ?? publication.status : publicationLabel.UNLISTED}</span></td>
     <td>{date(model.created_at)}<span className="av-table-subtext">更新 {date(model.updated_at)}</span></td>
-    <td><div className={styles.rowActions}><button type="button" onClick={() => onSelect(model.id)}>配置</button><button type="button" onClick={() => { onSelect(model.id); window.requestAnimationFrame(() => document.getElementById('product-prices')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>价格管理</button>{publication?.status==='PUBLISHED'&&model.product_type_code==='BIKE'&&isNumericId?<a href={`/de/explore/${model.product_id}`} target="_blank" rel="noopener noreferrer">官网详情</a>:null}</div></td>
+    <td><div className={styles.rowActions}><button type="button" onClick={() => onSelect(model.id)}>配置</button><button type="button" onClick={() => onRecycle(model)} disabled={busy}>删除</button><button type="button" onClick={() => { onSelect(model.id); window.requestAnimationFrame(() => document.getElementById('product-prices')?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}>价格管理</button>{publication?.status==='PUBLISHED'&&model.product_type_code==='BIKE'&&isNumericId?<a href={`/de/explore/${model.product_id}`} target="_blank" rel="noopener noreferrer">官网详情</a>:null}</div></td>
   </tr>;
 }
 

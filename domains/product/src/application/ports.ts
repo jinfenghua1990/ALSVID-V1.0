@@ -1,4 +1,4 @@
-import type { HomepageBinding, HomepageBindingMode, HomepageSlotCode, ModelFieldDefinition, CustomFieldType, CustomFieldValue, PlatformRow, ProductCatalog, ProductEntityKind, ProductStatus, ProductTypeCode } from '../core/model.js';
+import type { HomepageBinding, HomepageBindingMode, HomepageSlotCode, ModelFieldDefinition, CustomFieldType, CustomFieldValue, PlatformRow, ProductCatalog, ProductEntityKind, ProductStatus, ProductTypeCode , RecycledModel} from '../core/model.js';
 import type { CatalogPublishAssetRow,PublicationRow,PublicationStatus,PublicationDraft } from '../core/publication.js';
 import type { QueryExecutor } from '@alsvid/database';
 
@@ -129,4 +129,7 @@ export interface ProductRepository {
   /** Reasons a model cannot be physically deleted (empty array = deletable). */
   modelDeletionBlockers(id: string): Promise<string[]>;
   deleteModel(input: { id: string; expectedVersion: number; actorUserId: string }): Promise<boolean>;
+  recycleModel(input: { id: string; expectedVersion: number; actorUserId: string }): Promise<boolean>;
+  restoreModel(input: { id: string; actorUserId: string }): Promise<boolean>;
+  listRecycledModels(): Promise<RecycledModel[]>;
 }
