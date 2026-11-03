@@ -45,6 +45,15 @@ function statusLabel(status: string | null | undefined) {
   return labels[status] ?? status;
 }
 
+function bomReadinessLabel(modelId: string, boms: readonly BomRow[], error: string): string {
+  if (error) return '无法核验';
+  const records=boms.filter(item=>item.model_id===modelId);
+  if (!records.length) return '未建立';
+  if (records.some(item=>item.revision_status==='RELEASED' && Number(item.line_count??0)>0)) return '已发布';
+  if (records.every(item=>Number(item.line_count??0)===0)) return '草稿 · 0项待配置';
+  return '草稿 · 未发布';
+}
+
 function modelShortName(model: Pick<Model, 'name' | 'code'>) {
   const match = model.name.match(/\bALSVID\s+([A-Z0-9]+)\b/i);
   return match?.[1] ?? model.code;
@@ -619,7 +628,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
               filteredModels.length ? (
                 <div className={styles.archiveTableWrap}>
                   <table className={`${styles.archiveTable} ${styles.vehicleTable}`} aria-label="整车产品档案">
-                    <thead><tr><th>型号简称</th><th>整车名称 / 编码</th><th>技术平台</th><th>产品规格</th><th>目标市场</th><th>配置版本</th><th>状态</th><th>操作</th></tr></thead>
+                    <thead><tr><th>型号简称</th><th>整车名称 / 编码</th><th>技术平台</th><th>产品规格</th><th>目标市场</th><th>配置版本</th><th>BOM</th><th>状态</th><th>操作</th></tr></thead>
                     <tbody>{filteredModels.map(({ model, platform, variants }) => (
                       <tr key={model.id}>
                         <td title={model.name}><strong>{modelShortName(model)}</strong></td>
@@ -627,7 +636,8 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                         <td>{platform ? platformName(platform) : '未关联'}<span>{platform?.code ?? ''}</span></td>
                         <td>{modelSpecSummary(model, 'basic', 'productType') || '未填写'}<span>{modelSpecSummary(model, 'drivetrain', 'type') || '未填写'} · {modelSpecSummary(model, 'wheels', 'wheelSize') || '未填写'}</span></td>
                         <td>{modelSpecSummary(model, 'basic', 'markets') || '未填写'}</td>
-                        <td>{variants.length ? `${variants.length} 个配置` : '未配置'}</td>
+                        <td>{variants.length ? `${variants.length} 个配置${variants.some(variant => variant.code==='DEFAULT' && variant.description.includes('尚未确认')) ? ' · 待确认' : ''}` : '未配置'}</td>
+                        <td>{bomReadinessLabel(model.id,engineering.boms,engineeringError)}</td>
                         <td><span className={styles.archiveStatus} data-status={model.status}>{statusLabel(model.status)}</span></td>
                         <td><div className={styles.tableActionGroup}><button type="button" className={styles.archiveEdit} onClick={() => openTechnicalSpecs(model)}>技术参数</button><button type="button" className={styles.archiveEdit} onClick={() => setEdit({ entity: 'model', id: model.id, version: model.version, name: model.name, status: model.status, description: model.description, productTypeCode: model.product_type_code, customFields: modelCustomFields(model.custom_fields) })}>编辑</button><button type="button" className={styles.archiveEdit} aria-label={`编辑 ${model.code} 配置版本与 SKU`} onClick={() => {setMessage('');setManageModelId(model.id);}}>版本 / SKU</button></div></td>
                       </tr>
