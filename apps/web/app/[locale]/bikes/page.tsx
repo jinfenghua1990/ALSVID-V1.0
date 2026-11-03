@@ -57,7 +57,7 @@ export default async function BikesPage({ params, searchParams }: Props) {
     { id:"l7",code:"A1",platform:"fc",name:t("l7.model"),status:t("catalog.bikes.models.preview"),
       image:"/products/l7/reference-side.jpg",alt:t("l7.gallery.side.alt"),href:prefix+"/explore/l7" },
     { id:"l8",code:"L1",platform:"fc",name:t("l8.model"),status:t("catalog.bikes.models.preview"),
-      image:"/products/l8/retouched-side.webp",alt:t("l8.gallery.side.alt"),href:prefix+"/explore/l8" },
+      image:"/products/l8/retouched-side.webp",alt:t("l8.gallery.side.alt"),href:prefix+"/explore/l1" },
   ] as const;
   const models = previews.filter(model=>{
       if (!publicCatalog.available) return true;

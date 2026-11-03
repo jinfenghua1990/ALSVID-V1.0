@@ -13,9 +13,9 @@ export class PostgresProductRepository implements ProductRepository {
   async catalog(): Promise<ProductCatalog> {
     const [platforms, models, variants, skus, productTypes,modelFieldDefs] = await Promise.all([
       this.database.query<any>('SELECT id, code, name, description, status, version, created_at, updated_at FROM product.platforms ORDER BY code'),
-      this.database.query<any>('SELECT id, product_id, platform_id, product_type_code, code, name, description, custom_fields, status, version, created_at, updated_at FROM product.models ORDER BY code'),
-      this.database.query<any>('SELECT id, model_id, code, name, description, attributes, status, version, created_at, updated_at FROM product.variants ORDER BY code'),
-      this.database.query<any>('SELECT id, product_id, sku_number, sku_sequence, variant_id, sku, name, market_code, color_code, size_code, attributes, status, version, created_at, updated_at FROM product.skus ORDER BY sku'),
+      this.database.query<any>('SELECT id, product_id, platform_id, product_type_code, code, name, description, custom_fields, status, version, created_at, updated_at FROM product.models m WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=m.product_id) ORDER BY code'),
+      this.database.query<any>('SELECT id, model_id, code, name, description, attributes, status, version, created_at, updated_at FROM product.variants v WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=v.product_id) ORDER BY code'),
+      this.database.query<any>('SELECT id, product_id, sku_number, sku_sequence, variant_id, sku, name, market_code, color_code, size_code, attributes, status, version, created_at, updated_at FROM product.skus s WHERE NOT EXISTS (SELECT 1 FROM product.model_merge_aliases a WHERE a.legacy_product_id=s.product_id) ORDER BY sku'),
       this.database.query<any>('SELECT code,name,description,status FROM product.product_types ORDER BY code'),
       this.modelFieldDefinitions(),
     ]);

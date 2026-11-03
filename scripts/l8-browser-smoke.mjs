@@ -24,23 +24,23 @@ try {
         page.on("pageerror", error => errors.push(error.message));
         const home = await page.goto(base + "/" + locale + "/", { waitUntil: "domcontentloaded" });
         assert.equal(home?.status(), 200);
-        const launch = page.locator('[data-home-product-collection] article:has(a[href="/' + locale + '/explore/l8"])');
+        const launch = page.locator('[data-home-product-collection] article:has(a[href="/' + locale + '/explore/l1"])');
         assert.equal(await launch.count(), 1, "One L8 card in the homepage collection");
         await launch.scrollIntoViewIfNeeded();
         await page.waitForFunction(() => {
-          const image = document.querySelector('[data-home-product-collection] a[href$="/explore/l8"] img');
+          const image = document.querySelector('[data-home-product-collection] a[href$="/explore/l1"] img');
           return image?.complete && image.naturalWidth > 0;
         });
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Homepage fits viewport");
         await launch.screenshot({ path: output + "/l8-home-" + locale + "-" + device + ".png" });
         await launch.locator("a").first().click();
-        await page.waitForURL("**/" + locale + "/explore/l8");
+        await page.waitForURL("**/" + locale + "/explore/l1");
         const product = page.locator('main[data-l8-product="1"]');
         await product.waitFor({ state: "visible" });
         assert.equal(await product.getAttribute("lang"), locale);
         assert.equal(await product.locator("[data-public-site-header]").count(), 1);
         assert.match(await product.locator("h1").innerText(), /ALSVID\s*L1/);
-        assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), "https://www.alsvidbike.com/" + locale + "/explore/l8");
+        assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), "https://www.alsvidbike.com/" + locale + "/explore/l1");
         assert.equal(await page.locator('link[rel="alternate"][hreflang]').count(), 4);
         await page.waitForFunction(() => {
           const image = document.querySelector('[data-l8-photo="side"]');
@@ -76,7 +76,13 @@ try {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "L8 fits " + device);
         await page.evaluate(() => scrollTo(0, 0));
         await page.screenshot({ path: output + "/l8-product-" + locale + "-" + device + ".png", fullPage: true });
-        await page.goto(base + "/" + locale + "/explore/l8", { waitUntil: "domcontentloaded" });
+        if (device === "desktop") {
+          await page.goto(base + "/" + locale + "/explore/l8", { waitUntil: "domcontentloaded" });
+          assert.equal(new URL(page.url()).pathname, "/" + locale + "/explore/l1", "Legacy L8 redirects to L1");
+          await page.goto(base + "/" + locale + "/explore/100001", { waitUntil: "domcontentloaded" });
+          assert.equal(new URL(page.url()).pathname, "/" + locale + "/explore/l1", "Legacy F8 product ID redirects to L1");
+        }
+        await page.goto(base + "/" + locale + "/explore/l1", { waitUntil: "domcontentloaded" });
         const target = locale === "en" ? "de" : "en";
         if (device === "desktop") {
           await page.locator('header details[class*="switcher"] summary').click();
@@ -84,9 +90,9 @@ try {
           await page.locator("header > details summary").click();
         }
         const language = page.locator('header a[hreflang="' + target + '"]:visible').first();
-        assert.equal(await language.getAttribute("href"), "/" + target + "/explore/l8");
+        assert.equal(await language.getAttribute("href"), "/" + target + "/explore/l1");
         await language.click();
-        await page.waitForURL("**/" + target + "/explore/l8");
+        await page.waitForURL("**/" + target + "/explore/l1");
         assert.ok((await context.cookies()).some(cookie => cookie.name === "alsvid-locale-v2" && cookie.value === target));
         assert.deepEqual(errors, [], "No browser runtime errors");
         report.checks.push(locale + " " + device + ": homepage entry, detail route, photos, gallery keyboard, chapter links, reference specs, language switch, metadata, responsive width");

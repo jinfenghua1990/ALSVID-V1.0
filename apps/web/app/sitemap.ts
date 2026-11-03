@@ -15,7 +15,7 @@ const publicPagePaths = [
 const dedicatedProductPaths = [
   "/explore/fc2",
   "/explore/l7",
-  "/explore/l8",
+  "/explore/l1",
   "/explore/accessory-cup-holder",
 ] as const;
 

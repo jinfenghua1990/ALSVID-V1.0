@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { notFound, redirect, permanentRedirect } from "next/navigation";
 import { translator } from "../../../_lib/i18n";
 import { isLocale } from "../../../_lib/i18n/routing";
 import { getHomeDetail } from "../../../_lib/home-details";
@@ -19,6 +19,7 @@ import styles from "../../../_components/home/original-home.module.css";
 type Props = { params: Promise<{ locale: string; slug: string }>; searchParams: Promise<{ view?: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
+  if (slug === "100001" && isLocale(locale)) return {alternates:{canonical:`https://www.alsvidbike.com/${locale}/explore/l1`}};
   if (/^\d{6}$/.test(slug)) {
     const product = (await publishedProductCatalog()).items.find(item => item.productId === slug);
     if (product && isLocale(locale)) return {title:product.title[locale],alternates:{canonical:`https://www.alsvidbike.com/${locale}/explore/${slug}`}};
@@ -45,6 +46,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 export default async function HomeDetailPage({ params, searchParams }: Props) {
   const { locale, slug } = await params;
+  if (slug === "100001") {
+    if (!isLocale(locale)) notFound();
+    permanentRedirect(`/${locale}/explore/l1`);
+  }
   if (/^\d{6}$/.test(slug)) {
     if (!isLocale(locale)) notFound();
     const product = (await publishedProductCatalog()).items.find(item => item.productId === slug && item.type === "BIKE");

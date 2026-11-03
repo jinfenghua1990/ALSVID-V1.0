@@ -11,9 +11,9 @@ export function L8LaunchCard({ locale }: { locale: Locale }) {
       <p className={styles.eyebrow}>{t("l8.eyebrow")}</p>
       <h2>{t("brand.name")} {t("l8.model")}</h2>
       <p>{t("l8.launch.body")}</p>
-      <a className={styles.button} href={`/${locale}/explore/l8`}>{t("l8.explore")}</a>
+      <a className={styles.button} href={`/${locale}/explore/l1`}>{t("l8.explore")}</a>
     </div>
-    <a className={styles.launchVisual} href={`/${locale}/explore/l8`} aria-label={t("l8.explore")}>
+    <a className={styles.launchVisual} href={`/${locale}/explore/l1`} aria-label={t("l8.explore")}>
       <span className={styles.backdrop} aria-hidden="true">L1</span>
       <img src="/products/l8/retouched-side.webp" width={1024} height={1024} alt={t("l8.gallery.side.alt")} loading="lazy" />
     </a>
