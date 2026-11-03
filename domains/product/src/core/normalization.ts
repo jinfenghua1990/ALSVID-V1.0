@@ -23,3 +23,23 @@ export function normalizeSkuDimension(value: string | null | undefined, field: '
     throw new ProductValidationError(field+' must use at most 32 A-Z, 0-9, _ or - characters');
   return dimension;
 }
+
+/** Business-facing mnemonic stock code; NOT a database primary key. */
+export function normalizeMnemonicSku(value: string): string {
+  if (typeof value !== 'string') throw new ProductValidationError('SKU must be text');
+  const sku = value.trim().toUpperCase();
+  if (!/^[A-Z][A-Z0-9]-[A-Z]{3}-[A-Z0-9]{3}$/.test(sku))
+    throw new ProductValidationError('SKU must use 2-3-3 format, e.g. A1-EBI-BLK');
+  const category = sku.slice(3, 6);
+  if (!['EBI','BAT','CHG','MOT','RCK','FND','LCK','HLM','BAG'].includes(category))
+    throw new ProductValidationError('SKU category must come from the ALSVID dictionary');
+  return sku;
+}
+
+export function normalizeMnemonicPrefix(value: string): string {
+  if (typeof value !== 'string') throw new ProductValidationError('SKU prefix must be text');
+  const prefix = value.trim().toUpperCase();
+  if (!/^[A-Z][A-Z0-9]$/.test(prefix))
+    throw new ProductValidationError('SKU prefix must be two uppercase alphanumeric characters, e.g. A1 or AU');
+  return prefix;
+}

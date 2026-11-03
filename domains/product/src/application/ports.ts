@@ -40,6 +40,7 @@ export interface CreateModelRecord {
   platformId: string | null;
   productTypeCode: ProductTypeCode;
   code: string;
+  skuPrefix: string | null;
   name: string;
   description: string;
   actorUserId: string;
@@ -121,6 +122,7 @@ export interface ProductRepository {
   createModel(input: CreateModelRecord): Promise<any>;
   createVariant(input: CreateVariantRecord): Promise<any>;
   createSku(input: CreateSkuRecord): Promise<any>;
+  skuOwnerForVariant(variantId: string): Promise<{modelCode: string; skuPrefix: string | null; productTypeCode: ProductTypeCode} | null>;
   update(input: UpdateProductRecord): Promise<any | null>;
   exists(entity: ProductEntityKind, id: string): Promise<boolean>;
   /** Reasons a model cannot be physically deleted (empty array = deletable). */

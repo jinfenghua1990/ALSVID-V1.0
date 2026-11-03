@@ -13,7 +13,7 @@ interface CreateModelFieldBody {
 }
 interface UpdateModelFieldBody { expectedVersion:number; label?:string; status?:'ACTIVE'|'RETIRED'; required?:boolean }
 interface DeleteModelFieldBody { expectedVersion:number }
-interface CreateModelBody { platformId?: string | null; productTypeCode?: ProductTypeCode; code: string; name: string; description?: string; customFields?: Record<string,unknown>; technicalSpecs?: Record<string,unknown> }
+interface CreateModelBody { platformId?: string | null; productTypeCode?: ProductTypeCode; code: string; skuPrefix?: string; name: string; description?: string; customFields?: Record<string,unknown>; technicalSpecs?: Record<string,unknown> }
 interface UpdateHomepageBindingBody { slot: HomepageSlotCode; mode: HomepageBindingMode; modelId?: string | null; expectedVersion: number }
 interface CreateVariantBody { modelId: string; code: string; name: string; description?: string; attributes?: Record<string, unknown> }
 interface CreateSkuBody { variantId: string; sku: string; name: string; marketCode?: string; colorCode?: string; sizeCode?: string; attributes?: Record<string, unknown> }
