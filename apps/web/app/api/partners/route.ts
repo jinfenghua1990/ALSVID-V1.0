@@ -4,7 +4,9 @@ import { backendFetch } from '../_lib/backend';
 export async function GET(request: Request): Promise<NextResponse> {
   const url = new URL(request.url);
   const query = url.searchParams.get('q') ?? '';
-  const response = await backendFetch(`/v1/partners?q=${encodeURIComponent(query)}`);
+  const role = url.searchParams.get('role') ?? '';
+  const suffix = role ? `&role=${encodeURIComponent(role)}` : '';
+  const response = await backendFetch(`/v1/partners?q=${encodeURIComponent(query)}${suffix}`);
   return NextResponse.json(await response.json(), { status: response.status });
 }
 
