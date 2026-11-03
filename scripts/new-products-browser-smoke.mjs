@@ -25,7 +25,7 @@ try {
         const response = await page.goto(base + "/" + locale + "/", { waitUntil: "domcontentloaded" });
         assert.equal(response?.status(), 200);
         const header = page.locator("[data-public-site-header]");
-        for (const model of ["l7", "l8"]) {
+        for (const model of ["l7", "l1"]) {
           const link = header.locator('a[href="/' + locale + '/explore/' + model + '"]:visible').first();
           assert.ok(await link.isVisible(), model + " is visible in the top navigation");
           assert.equal((await link.innerText()).trim(), model === 'l7' ? 'A1' : 'L1');
@@ -151,7 +151,7 @@ try {
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Cup holder fits viewport");
         await page.screenshot({ path: output + "/cup-holder-top-" + locale + "-" + device + ".png" });
         assert.deepEqual(errors, []);
-        report.checks.push(locale + " " + device + ": visible L7/L8 top links, four mobile models fit, L7 navigation/gallery/specs/locale, accessory catalog link, original video playback/seeking/end/byte ranges, all five main photos/six colours/17 ordered uncropped detail images/source specs and responsive width");
+        report.checks.push(locale + " " + device + ": visible L7/L1 top links, four mobile models fit, L7 navigation/gallery/specs/locale, accessory catalog link, original video playback/seeking/end/byte ranges, all five main photos/six colours/17 ordered uncropped detail images/source specs and responsive width");
       } finally { await context.close(); }
     }
   }
