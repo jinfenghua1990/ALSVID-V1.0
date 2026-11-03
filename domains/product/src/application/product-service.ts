@@ -2,7 +2,7 @@ import { ForbiddenError } from '@alsvid/kernel';
 import { postgresErrorCode } from '@alsvid/database';
 import { ProductConflictError, ProductNotFoundError, ProductValidationError } from '../core/errors.js';
 import { ProductCapability, type HomepageBinding, type HomepageBindingMode, type HomepageSlotCode, type ModelFieldDefinition, type CustomFieldType, type CustomFieldValue, type ProductCatalog, type RecycledModel, type ProductEntityKind, type ProductStatus, type ProductTypeCode } from '../core/model.js';
-import { normalizeProductCode, normalizeProductCountry, normalizeSkuDimension, normalizeMnemonicSku, normalizeMnemonicPrefix } from '../core/normalization.js';
+import { normalizeProductCode, normalizeProductCountry, normalizeSkuDimension, normalizeMnemonicSku, normalizeMnemonicPrefix, deriveVehicleSkuPrefix } from '../core/normalization.js';
 import {approvedCatalogAssets,mergeCatalogAssets,assertPublicationTransition,curatedCatalogImage,toPublicCatalogItem,validatePublicationDraft,type PublicationAction,type PublicationDraft} from '../core/publication.js';
 import type { ProductActor, ProductAuditPort, ProductRepository } from './ports.js';
 
@@ -333,9 +333,13 @@ export class ProductService {
     if (productTypeCode === 'BIKE' && !input.platformId && !input.seriesId) throw new ProductValidationError('Bicycle requires a product series');
     if (productTypeCode !== 'BIKE' && (input.platformId || input.seriesId)) throw new ProductValidationError('Accessories cannot use a bicycle series or platform');
     if (!input.name?.trim()) throw new ProductValidationError('Model name is required');
-    // Existing API callers may omit this until the related model is normalized.
-    const skuPrefix = input.skuPrefix ? normalizeMnemonicPrefix(input.skuPrefix) :
-      (code.length === 2 && /^[A-Z][A-Z0-9]$/.test(code) ? code : null);
+    // Vehicle prefixes are derived by the same standard shown in the employee form.
+    // Keep a manual fallback for exceptional legacy/admin API callers only.
+    const skuPrefix = productTypeCode === 'BIKE'
+      ? deriveVehicleSkuPrefix(code) ?? (input.skuPrefix ? normalizeMnemonicPrefix(input.skuPrefix) : null)
+      : input.skuPrefix ? normalizeMnemonicPrefix(input.skuPrefix) : null;
+    if (productTypeCode === 'BIKE' && !skuPrefix)
+      throw new ProductValidationError('无法按标准生成车型 SKU 前缀，请管理员确认车型代号和专属前缀');
     if (productTypeCode === 'BIKE' && (skuPrefix === 'AL' || skuPrefix === 'UN'))
       throw new ProductValidationError('AL and UN are reserved for shared/universal accessories');
     const customFields = validateModelFields(await this.repository.modelFieldDefinitions(),
@@ -347,7 +351,9 @@ export class ProductService {
       await this.audit.record({ actorUserId: actor.userId, action: 'product.model_created', targetType: 'product.model', targetId: row.id, metadata: { code } });
       return row;
     } catch (error) {
-      mapCreateError(error, 'Model code already exists', 'Platform not found');
+      mapCreateError(error,
+        productTypeCode === 'BIKE' ? '车型代号或自动生成的 SKU 前缀已存在，请检查现有车型档案' : '商品编码已存在',
+        '所选产品系列或默认技术平台不存在或未启用');
     }
   }
 

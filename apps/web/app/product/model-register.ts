@@ -15,6 +15,21 @@ type BuildSpec = { sku_id: string; code: string; status: string };
 type Catalog = { variants: readonly Variant[]; skus: readonly Sku[] };
 type Engineering = { boms: readonly Bom[]; buildSpecs: readonly BuildSpec[] };
 
+/** One deterministic family-prefix rule for vehicle registration.
+ * A1 -> A1; FC1 -> FC; A1-ULTRA -> AU; L1-PRO -> LP.
+ * Unknown formats are sent to an administrator rather than guessed.
+ */
+export function deriveVehicleSkuPrefix(modelCode: string): string | null {
+  if (typeof modelCode !== 'string') return null;
+  const code = modelCode.trim().toUpperCase();
+  if (!/^[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)?$/.test(code)) return null;
+  const segments = code.split('-');
+  if (segments.length === 2) return `${segments[0]![0]}${segments[1]![0]}`;
+  if (code.length === 2) return code;
+  if (/^[A-Z]{2}[A-Z0-9]+$/.test(code)) return code.slice(0, 2);
+  return null;
+}
+
 export function modelEngineeringStage(modelId: string, catalog: Catalog, engineering: Engineering): string {
   const variantIds = new Set(catalog.variants.filter((variant) => variant.model_id === modelId).map((variant) => variant.id));
   const skuIds = new Set(catalog.skus.filter((sku) => variantIds.has(sku.variant_id)).map((sku) => sku.id));

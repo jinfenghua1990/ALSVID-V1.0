@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { normalizeProductCode, ProductValidationError } from './index.js';
+import { deriveVehicleSkuPrefix, normalizeProductCode, ProductValidationError } from './index.js';
+
+test('vehicle SKU family prefixes are deterministic and unknown formats require review', () => {
+  assert.equal(deriveVehicleSkuPrefix('A1'), 'A1');
+  assert.equal(deriveVehicleSkuPrefix('A2'), 'A2');
+  assert.equal(deriveVehicleSkuPrefix('FC1'), 'FC');
+  assert.equal(deriveVehicleSkuPrefix('A1-ULTRA'), 'AU');
+  assert.equal(deriveVehicleSkuPrefix('L1-PRO'), 'LP');
+  assert.equal(deriveVehicleSkuPrefix('A1-ULTRA-PLUS'), null);
+});
 
 test('product codes normalize to stable uppercase identifiers', () => {
   assert.equal(normalizeProductCode(' fc1-pro '), 'FC1-PRO');
