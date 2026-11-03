@@ -268,7 +268,7 @@ export class PostgresProductRepository implements ProductRepository {
       : `INSERT INTO product.models(platform_id,product_type_code,code,name,description,custom_fields,created_by,updated_by,sku_prefix)
          VALUES ($1,$2,$3,$4,$5,jsonb_set($7::jsonb,'{__technical_specs}',$8::jsonb,true),$6,$6,$9) RETURNING *`;
     const result = await this.database.query<any>(sql,
-      [input.platformId,input.productTypeCode,input.code,input.name,input.description,input.actorUserId,JSON.stringify(input.customFields ?? {}),JSON.stringify(input.technicalSpecs ?? {}),input.skuPrefix,input.seriesId ?? null]);
+      [input.platformId,input.productTypeCode,input.code,input.name,input.description,input.actorUserId,JSON.stringify(input.customFields ?? {}),JSON.stringify(input.technicalSpecs ?? {}),input.skuPrefix,...(input.productTypeCode === 'BIKE' ? [input.seriesId ?? null] : [])]);
     return result.rows[0] ?? null;
   }
 
