@@ -179,12 +179,6 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
   const [platformDraft, setPlatformDraft] = useState<Platform | 'new' | null>(null);
   const [platformStatusFilter, setPlatformStatusFilter] = useState('ALL');
   const [savingPlatform, setSavingPlatform] = useState(false);
-  const [fieldManager, setFieldManager] = useState(false);
-  const [fieldDraft, setFieldDraft] = useState<CustomFieldDefinition | 'new' | null>(null);
-  const [fieldScope, setFieldScope] = useState<'BIKE'|'ACCESSORY'|'SERVICE_PART'>('BIKE');
-  const [fieldType, setFieldType] = useState<'TEXT'|'NUMBER'|'BOOLEAN'|'SELECT'>('TEXT');
-  const [savingField, setSavingField] = useState(false);
-  const [deletingFieldId, setDeletingFieldId] = useState<string | null>(null);
   const [workspace, setWorkspace] = useState<'bikes' | 'models' | 'parts' | 'platforms'>('bikes');
   const [partTab, setPartTab] = useState<'manufacturing' | 'retail'>('manufacturing');
   const [createKind, setCreateKind] = useState<'bike' | 'part' | 'accessory' | null>(null);
@@ -401,61 +395,6 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
     }
   }
 
-  async function saveField(event:FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if(!fieldDraft||savingField)return;
-    const form=new FormData(event.currentTarget);
-    const creating=fieldDraft==='new';
-    const payload=creating?{
-      productTypeCode:fieldScope,code:String(form.get('code')??''),label:form.get('label'),
-      fieldType,required:form.get('required')==='on',
-      options:fieldType==='SELECT'?String(form.get('options')??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean):[],
-    }:{
-      expectedVersion:fieldDraft.version,label:form.get('label'),
-      required:form.get('required')==='on',status:form.get('status'),
-    };
-    let written=false;
-    setSavingField(true);
-    try {
-      const saved=await api(creating?'/v1/product/model-fields':`/v1/product/model-fields/${fieldDraft.id}`,{
-        method:creating?'POST':'PATCH',body:JSON.stringify(payload),
-      }) as CustomFieldDefinition;
-      written=true;
-      const verified=await api('/v1/product/catalog') as Catalog;
-      const row=(verified.modelFieldDefinitions??[]).find(def=>def.id===saved.id);
-      if(!row||row.version!==saved.version||row.label!==saved.label||row.status!==saved.status)
-        throw new Error('字段写入后回读不一致，请核对记录后再操作');
-      setCatalog({...emptyCatalog,...verified});
-      setFieldDraft(null);
-      setMessage('商品字段已保存，并从数据库回读核验。');
-    }catch(error){
-      if(written)setFieldDraft(null);
-      setMessage((written?'字段写入成功但尚未完成回读：':'字段保存失败：')+
-        (error instanceof Error?error.message:'请求异常'));
-    }finally{setSavingField(false);}
-  }
-
-  async function deleteField(def: CustomFieldDefinition) {
-    if (deletingFieldId) return;
-    if (!window.confirm(`确定删除字段“${def.label} / ${def.code}”吗？该字段在车型中已保存的值也会一并删除，且无法恢复。`)) return;
-    setDeletingFieldId(def.id);
-    try {
-      const deleted = await api(`/v1/product/model-fields/${def.id}`, {
-        method: 'DELETE', body: JSON.stringify({ expectedVersion: def.version }),
-      }) as CustomFieldDefinition & { affectedModels?: number };
-      const verified = await api('/v1/product/catalog') as Catalog;
-      if ((verified.modelFieldDefinitions ?? []).some(item => item.id === def.id)) {
-        throw new Error('删除接口已返回成功，但数据库回读仍存在该字段，请先核对后不要重复操作。');
-      }
-      setCatalog({ ...emptyCatalog, ...verified });
-      setMessage(`字段“${def.label}”已删除${deleted.affectedModels ? `，已清理 ${deleted.affectedModels} 条车型字段值` : ''}。`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : '字段删除失败');
-    } finally {
-      setDeletingFieldId(null);
-    }
-  }
-
   async function release(endpoint: string) {
     try {
       await api(endpoint, { method: 'POST', body: '{}' });
@@ -539,11 +478,6 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
           </div>
           <div className={styles.archiveHeadingActions}>
             <button type="button" className={styles.archiveSecondaryButton} onClick={() => void reload()} disabled={loading}>刷新</button>
-            {workspace === 'bikes' || (workspace === 'parts' && partTab === 'retail') ?
-              <button type="button" className={styles.archiveSecondaryButton} disabled={loading||!!catalogError}
-                onClick={()=>{setFieldScope(workspace==='bikes'?'BIKE':'ACCESSORY');setFieldManager(true);}}>
-                自定义字段管理
-              </button> : null}
             {workspace === 'bikes' || workspace === 'models' ? <button type="button" className={styles.archivePrimaryButton} onClick={() => {setNewModelType('BIKE');setCreateKind('bike');}}>＋ 新建整车</button> : null}
             {workspace === 'platforms' ? <button type="button" className={styles.archivePrimaryButton} disabled={loading || !!catalogError} onClick={() => setPlatformDraft('new')}>＋ 新建技术平台</button> : null}
             {workspace === 'parts' ? <button type="button" className={styles.archivePrimaryButton} onClick={() => { if (partTab === 'manufacturing') setCreateKind('part'); else {setNewModelType('ACCESSORY');setCreateKind('accessory');} }}>＋ {partTab === 'manufacturing' ? '新建零件' : '新建可售配件'}</button> : null}
@@ -822,71 +756,6 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
         </div>
       ) : null}
 
-      {view === 'archive' && fieldManager && !fieldDraft ? (
-        <div className={styles.modal} role="presentation" onMouseDown={()=>setFieldManager(false)}>
-          <section className={styles.fieldManagerCard} role="dialog" aria-modal="true" aria-label="管理商品字段"
-            onMouseDown={event=>event.stopPropagation()} onKeyDown={event=>{if(event.key==='Escape')setFieldManager(false);}}>
-            <div className={styles.createCardHeading}><div><span>产品研发 / 商品主档案</span><h2>自定义字段管理</h2>
-              <p>字段仅用于商品主档案（SPU）；不会修改 SKU、价格、库存或 BOM。</p></div>
-              <button type="button" className={styles.createClose} aria-label="关闭" onClick={()=>setFieldManager(false)}>×</button>
-            </div>
-            <div className={styles.archiveFilters}>
-              <select aria-label="字段所属商品类型" value={fieldScope} onChange={event=>setFieldScope(event.target.value as typeof fieldScope)}>
-                <option value="BIKE">整车</option><option value="ACCESSORY">可售配件</option><option value="SERVICE_PART">售后配件商品</option>
-              </select>
-              <button type="button" className={styles.archivePrimaryButton} onClick={()=>{setFieldType('TEXT');setFieldDraft('new');}}>＋ 新建字段</button>
-            </div>
-            {(catalog.modelFieldDefinitions??[]).filter(def=>def.product_type_code===fieldScope).length?
-              <div className={styles.archiveTableWrap}><table className={styles.archiveTable} aria-label="商品字段定义">
-                <thead><tr><th>字段名称 / 编码</th><th>类型</th><th>必填</th><th>状态</th><th>操作</th></tr></thead>
-                <tbody>{(catalog.modelFieldDefinitions??[]).filter(def=>def.product_type_code===fieldScope).map(def=><tr key={def.id}>
-                  <td><strong>{def.label}</strong><span>{def.code}</span></td>
-                  <td>{({TEXT:'文本',NUMBER:'数字',BOOLEAN:'是/否',SELECT:'下拉选项'} as const)[def.field_type]}</td>
-                  <td>{def.required?'是':'否'}</td><td>{def.status==='ACTIVE'?'启用':'已归档'}</td>
-                  <td><div className={styles.tableActionGroup}><button type="button" className={styles.archiveEdit} onClick={()=>{setFieldType(def.field_type);setFieldDraft(def);}}>编辑</button><button type="button" className={styles.archiveEdit} disabled={deletingFieldId === def.id || !!deletingFieldId} onClick={()=>void deleteField(def)}>{deletingFieldId === def.id ? '删除中…' : '删除'}</button></div></td>
-                </tr>)}</tbody>
-              </table></div>
-              :<div className={styles.archiveEmpty}>当前商品类型暂无自定义字段，可自行新建。</div>}
-            <p className={styles.archiveFootnote}>删除字段会同时移除车型中该字段的已保存值，删除后不可恢复。</p>
-          </section>
-        </div>
-      ):null}
-      {view === 'archive' && fieldDraft ? (
-        <div className={styles.modal} role="presentation" onMouseDown={()=>{if(!savingField)setFieldDraft(null);}}>
-          <form className={styles.createCard} role="dialog" aria-modal="true"
-            aria-label={fieldDraft==='new'?'新建商品字段':'编辑商品字段'}
-            onSubmit={event=>void saveField(event)}
-            onMouseDown={event=>event.stopPropagation()}
-            onKeyDown={event=>{if(event.key==='Escape'&&!savingField)setFieldDraft(null);}}>
-            <div className={styles.createCardHeading}><div><span>自定义字段 / {fieldScope}</span>
-              <h2>{fieldDraft==='new'?'新建商品字段':'编辑商品字段'}</h2>
-              <p>字段类型、编码及下拉选项建档后不可直接修改，避免破坏已有商品数据。</p></div>
-              <button type="button" className={styles.createClose} aria-label="关闭" disabled={savingField} onClick={()=>setFieldDraft(null)}>×</button>
-            </div>
-            <label>字段编码<input name="code" autoFocus={fieldDraft==='new'} required maxLength={32}
-              readOnly={fieldDraft!=='new'} defaultValue={fieldDraft==='new'?'':fieldDraft.code}
-              pattern="[A-Za-z0-9][A-Za-z0-9_-]*" placeholder="如 BATTERY_CAPACITY"/></label>
-            <label>字段名称<input name="label" autoFocus={fieldDraft!=='new'} required maxLength={120}
-              defaultValue={fieldDraft==='new'?'':fieldDraft.label} placeholder="如 电池容量"/></label>
-            <label>字段类型<select name="fieldType" value={fieldType} disabled={fieldDraft!=='new'}
-              onChange={event=>setFieldType(event.target.value as typeof fieldType)}>
-              <option value="TEXT">文本</option><option value="NUMBER">数字</option><option value="BOOLEAN">是/否</option><option value="SELECT">下拉选项</option>
-            </select></label>
-            {fieldType==='SELECT'?<label>选项（每行一个）
-              <textarea name="options" rows={4} disabled={fieldDraft!=='new'} required
-                defaultValue={fieldDraft==='new'?'':fieldDraft.options.join('\n')}
-                placeholder="20 英寸\n24 英寸"/></label>:null}
-            <label className={styles.fieldCheck}><input name="required" type="checkbox"
-              defaultChecked={fieldDraft==='new'?false:fieldDraft.required}/> 必填字段</label>
-            {fieldDraft!=='new'?<label>字段状态<select name="status" defaultValue={fieldDraft.status}>
-              <option value="ACTIVE">启用</option><option value="RETIRED">归档</option></select></label>:null}
-            <div className={styles.createActions}><button type="button" className={styles.archiveSecondaryButton}
-              disabled={savingField} onClick={()=>setFieldDraft(null)}>取消</button>
-              <button type="submit" className={styles.archivePrimaryButton} disabled={savingField}>
-                {savingField?'正在保存…':'保存字段'}</button></div>
-          </form>
-        </div>
-      ):null}
       {view === 'archive' && specModel && workspace !== 'models' ? <TechnicalSpecEditor
         model={specModel}
         platform={catalog.platforms.find(item => item.id === specModel.platform_id)}
