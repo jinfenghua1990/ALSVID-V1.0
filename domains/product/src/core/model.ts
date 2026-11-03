@@ -42,12 +42,14 @@ export interface ProductRowBase {
 }
 
 export interface PlatformRow extends ProductRowBase {}
+export interface ProductSeriesRow {id:string;code:string;name_zh:string;name_en:string;status:ProductStatus;default_platform_id:string|null}
 
 export interface ModelRow extends ProductRowBase {
   product_id: string;
   sku_prefix: string | null;
   custom_fields: Record<string, CustomFieldValue>;
   platform_id: string | null;
+  series_id?: string | null;
   product_type_code: ProductTypeCode;
 }
 
@@ -71,6 +73,7 @@ export interface SkuRow extends ProductRowBase {
 export interface ProductCatalog {
   productTypes: { code: ProductTypeCode; name: string; description: string; status: ProductStatus }[];
   platforms: PlatformRow[];
+  series?: ProductSeriesRow[];
   modelFieldDefinitions: ModelFieldDefinition[];
   models: ModelRow[];
   variants: VariantRow[];

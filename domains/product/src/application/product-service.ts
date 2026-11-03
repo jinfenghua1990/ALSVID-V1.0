@@ -284,13 +284,13 @@ export class ProductService {
     return row;
   }
 
-  async createModel(actor: ProductActor, input: { platformId?: string | null; productTypeCode?: ProductTypeCode; code: string; skuPrefix?: string; name: string; description?: string; customFields?: Record<string,unknown>; technicalSpecs?: Record<string,unknown> }): Promise<any> {
+  async createModel(actor: ProductActor, input: { platformId?: string | null; seriesId?: string | null; productTypeCode?: ProductTypeCode; code: string; skuPrefix?: string; name: string; description?: string; customFields?: Record<string,unknown>; technicalSpecs?: Record<string,unknown> }): Promise<any> {
     requireCapability(actor, ProductCapability.Write);
     const code = normalizeProductCode(input.code);
     const productTypeCode = input.productTypeCode ?? 'BIKE';
     if (!['BIKE','ACCESSORY','SERVICE_PART'].includes(productTypeCode)) throw new ProductValidationError('Unsupported product type');
-    if (productTypeCode === 'BIKE' && !input.platformId) throw new ProductValidationError('Bicycle requires technical platform');
-    if (productTypeCode !== 'BIKE' && input.platformId) throw new ProductValidationError('Accessory/service part cannot use a bicycle platform');
+    if (productTypeCode === 'BIKE' && !input.platformId && !input.seriesId) throw new ProductValidationError('Bicycle requires a product series');
+    if (productTypeCode !== 'BIKE' && (input.platformId || input.seriesId)) throw new ProductValidationError('Accessories cannot use a bicycle series or platform');
     if (!input.name?.trim()) throw new ProductValidationError('Model name is required');
     // Existing API callers may omit this until the related model is normalized.
     const skuPrefix = input.skuPrefix ? normalizeMnemonicPrefix(input.skuPrefix) :
@@ -301,8 +301,8 @@ export class ProductService {
       productTypeCode,input.customFields ?? {},{});
     const technicalSpecs = normalizeTechnicalSpecs(input.technicalSpecs);
     try {
-      const row = await this.repository.createModel({ platformId: productTypeCode === 'BIKE' ? input.platformId! : null, productTypeCode, code, skuPrefix, name: input.name.trim(), description: input.description?.trim() ?? '', customFields, technicalSpecs, actorUserId: actor.userId });
-      if (!row) throw new ProductValidationError('Selected technical platform is missing or not active');
+      const row = await this.repository.createModel({ platformId: productTypeCode === 'BIKE' ? input.platformId ?? null : null, seriesId: productTypeCode === 'BIKE' ? input.seriesId ?? null : null, productTypeCode, code, skuPrefix, name: input.name.trim(), description: input.description?.trim() ?? '', customFields, technicalSpecs, actorUserId: actor.userId });
+      if (!row) throw new ProductValidationError('Selected series or its default engineering platform is inactive');
       await this.audit.record({ actorUserId: actor.userId, action: 'product.model_created', targetType: 'product.model', targetId: row.id, metadata: { code } });
       return row;
     } catch (error) {

@@ -38,6 +38,7 @@ export interface CreateModelRecord {
   customFields?: Record<string, CustomFieldValue>;
   technicalSpecs?: Record<string, unknown>;
   platformId: string | null;
+  seriesId?: string | null;
   productTypeCode: ProductTypeCode;
   code: string;
   skuPrefix?: string | null;
