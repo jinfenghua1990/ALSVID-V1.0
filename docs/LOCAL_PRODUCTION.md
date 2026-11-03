@@ -15,22 +15,49 @@
 
 ## 首次准备（授权运维电脑）
 
-要求：Node.js 22+、Docker Compose v2、Google Cloud CLI；先使用 `gcloud auth login` 登录有对应项目 `Secret Manager Secret Accessor` 和 Cloud Run 只读权限的身份。
+### 前置条件
+
+| 依赖 | 要求 | 校验 |
+| --- | --- | --- |
+| Node.js | `>=22.18.0`（根 `package.json` engines） | `node -v` |
+| pnpm | `10.34.6`（`packageManager`，用 `corepack enable` 启用） | `pnpm -v` |
+| Git | 仓库必须是干净 `main` | `git branch --show-current`、`git status --porcelain` |
+| Docker | Docker Compose v2 | `docker compose version` |
+| Google Cloud CLI | 已 `gcloud auth login`，身份具备目标项目 `Secret Manager Secret Accessor` 与 Cloud Run 只读权限 | `gcloud auth list` |
+
+平台支持：macOS/Linux 使用 Docker Engine 或 Docker Desktop；Windows 使用 Docker Desktop（WSL2 后端）。启动脚本只调用 `docker` 与 `gcloud`，不依赖 bash。
+
+与 `docs/DEVELOPMENT_WORKFLOW.md` 的关系：该文件的“不在本地 clone/安装依赖/启动 localhost 开发服务”约束针对**开发工作站**；本文件是**授权运维节点**运行同一 Production 应用的可选例外。例外不改变开发流程、CI 与发布门禁，也不允许在本地修改代码。
+
+合规 checkout（压缩包或普通解压目录无法通过启动校验，脚本要求 Git 分支为 `main` 且工作区干净）：
 
 ```bash
+gh repo clone jinfenghua1990/ALSVID
+cd ALSVID
 git checkout main
 git pull --ff-only
 cp infra/local-production.env.example infra/.env.local
 ```
 
-仅在 `infra/.env.local` 填入 **非密钥** 配置：当前 Cloud Run 实际运行的 `GCP_PROJECT_ID`、`GCP_REGION`、`OBJECT_STORAGE_ENDPOINT`、`OBJECT_STORAGE_BUCKET`，以及发信地址和内部公司邮箱政策。模板里没有任何实际凭据。不要复制生产 DATABASE_URL、R2 密钥、邮件 API Key 到文件或 GitHub。
+仅在 `infra/.env.local` 填入 **非密钥** 配置。取值必须来自实际运行中的 Cloud Run，不得凭记忆填写：
 
-本地启动会使用当前 Google Cloud 项目的以下 Secret Manager 资源（与 `.github/workflows/production-deploy.yml` 一致）：
+```bash
+gcloud run services describe alsvid-api --project <GCP_PROJECT_ID> --region <GCP_REGION> \
+  --format='value(spec.template.spec.containers[0].env)'
+```
+
+- `GCP_PROJECT_ID` / `GCP_REGION`：以现有 `alsvid-web`/`alsvid-api` 实际所在的项目与区域为准。已记录的线上权威是 `alsvid-production`（`europe-west1`）；`alsvid-prod` 是未验证的迁移目标，**不得直接填写**。
+- `OBJECT_STORAGE_ENDPOINT` / `OBJECT_STORAGE_BUCKET`：必须与上述命令读到的 `alsvid-api` 容器环境变量完全一致（脚本会逐项比对）。
+- `MAIL_FROM_ADDRESS`、`NEXT_PUBLIC_FC1_RESERVATION_EMAIL`、`ALSVID_INTERNAL_EMAIL_DOMAINS`、`ALSVID_INTERNAL_REGISTRATION_MODE`、`ALSVID_INITIAL_ADMIN_EMAIL`：按业务政策填写。
+
+模板只接受上述非密钥键；写入 DATABASE_URL、R2 或邮件密钥会被脚本拒绝。不要把这些凭据写入文件、GitHub 或对话记录。
+
+本地启动会使用当前 Google Cloud 项目的以下 Secret Manager 资源（与 `.github/workflows/production-deploy.yml` 一致），四项缺一不可：
 
 - `alsvid-database-url`
 - `alsvid-r2-access-key`
 - `alsvid-r2-secret-key`
-- `alsvidbike-mail-api-key`
+- `alsvidbike-mail-api-key`（缺失时 API 容器直接无法启动，不只是邮件不可用）
 
 执行：
 
@@ -42,6 +69,22 @@ pnpm infra:down
 ```
 
 脚本会检查：当前是无已跟踪改动、无未跟踪源码文件的 `main`（被 `.gitignore` 忽略的 `infra/.env.local` 不在代码检查范围）；Neon URL 指向代码允许的唯一 TLS Production 主库；GCP 项目和区域下 `alsvid-api` 可读；本机配置的 R2 endpoint/bucket 与实际 Cloud Run API 配置相同；既有 Secret Manager 引用存在。任一检查不通过即不启动。启动后应访问 `http://127.0.0.1:8080/login?portal=admin` 使用真实用户权限登录。
+
+### 启动后可复核的证据
+
+```bash
+# 1) 运行的提交必须与本地 HEAD 相同
+git rev-parse HEAD
+curl -fsS http://127.0.0.1:8080/release-check
+
+# 2) 只应看到 gateway / web / api 三个容器，不应出现 postgres 或 worker
+docker ps --filter label=com.docker.compose.project=alsvid-local-production
+
+# 3) 只列密钥名称，不打印密钥值
+gcloud secrets list --project <GCP_PROJECT_ID> --format='value(name)'
+```
+
+`/release-check` 返回的 SHA 必须等于 `git rev-parse HEAD`（脚本以 `ALSVID_RELEASE_SHA` 注入）；`docker ps` 出现 `postgres`/`worker` 说明跑错了 compose。以上只证明应用已在本机回环运行，不代表数据一致性与并发验收已完成。
 
 ## 版本与并发安全
 
