@@ -30,12 +30,33 @@ const nextConfig: NextConfig = {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
   // Retired workbench must never render from a stale bookmark or deep link.
+  // The 14 internal workbench shells were retired on 2026-11-03 in favour of the
+  // canonical /admin modules; their old root and deep URLs stay reachable via 308
+  // so bookmarks and search results do not dead-end. /dealer and /supplier are
+  // separate external portals and are intentionally NOT redirected here.
   async redirects() {
+    const retiredWorkbench: Array<[string, string]> = [
+      ['/commerce', '/admin/ecommerce'],
+      ['/overview', '/admin/analytics'],
+      ['/dealers', '/admin/dealers'],
+      ['/finance', '/admin/finance'],
+      ['/inventory', '/admin/inventory'],
+      ['/logistics', '/admin/logistics'],
+      ['/production', '/admin/production'],
+      ['/product', '/admin/product'],
+      ['/supply', '/admin/supply'],
+      ['/vehicle360', '/admin/production/vin'],
+      ['/after-sales', '/admin/after-sales'],
+      ['/customers', '/admin/customers'],
+      ['/partners', '/admin/partners'],
+      ['/people', '/admin/settings'],
+    ];
     return [
       { source: '/admin-legacy', destination: '/admin', permanent: true },
       { source: '/admin-preview', destination: '/admin', permanent: true },
       { source: '/admin/workbench-v2', destination: '/admin', permanent: true },
       { source: '/admin/workbench-v3', destination: '/admin', permanent: true },
+      ...retiredWorkbench.map(([from, to]) => ({ source: `${from}/:path*`, destination: to, permanent: true })),
     ];
   },
 };

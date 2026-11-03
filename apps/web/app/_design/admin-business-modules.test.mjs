@@ -68,8 +68,9 @@ test('finance and logistics mount their original authenticated workspaces, witho
   }
   assert.match(finance, /<OperationsFrame embedded=\{embedded\} area="finance"/);
   assert.match(logistics, /<OperationsFrame embedded=\{embedded\} area="logistics"/);
-  assert.ok(existsSync(new URL('../finance/page.tsx', import.meta.url)));
-  assert.ok(existsSync(new URL('../logistics/page.tsx', import.meta.url)));
+  // The legacy route shells are retired; only the embedded Admin workspaces remain.
+  assert.equal(existsSync(new URL('../finance/page.tsx', import.meta.url)), false);
+  assert.equal(existsSync(new URL('../logistics/page.tsx', import.meta.url)), false);
 });
 
 test('framework directory has a single source of 11 Admin modules and does not present mocked KPI records', () => {

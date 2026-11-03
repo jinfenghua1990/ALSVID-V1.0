@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 
@@ -49,7 +49,6 @@ test('client read states distinguish error/unauthorized from true empty record l
 
 test('legacy directory and settings subroutes converge on canonical authorized Admin views', () => {
   const routes = [
-    ['../customers/page.tsx', '/admin/customers'],
     ['../settings/access/page.tsx', '/admin/settings'],
     ['../settings/roles/page.tsx', '/admin/settings'],
     ['../settings/audit/page.tsx', '/admin/settings'],
@@ -59,4 +58,7 @@ test('legacy directory and settings subroutes converge on canonical authorized A
     assert.ok(content.includes("redirect('" + target + "')"), path);
     assert.ok(!content.includes('PortalSectionPage'), path);
   }
+  // /customers is retired as a route and now resolves through the permanent redirect map.
+  assert.equal(existsSync(new URL('../customers/page.tsx', import.meta.url)), false);
+  assert.match(read('../../next.config.ts'), /\['\/customers', '\/admin\/customers'\]/);
 });
