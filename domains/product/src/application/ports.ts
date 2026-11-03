@@ -123,4 +123,7 @@ export interface ProductRepository {
   createSku(input: CreateSkuRecord): Promise<any>;
   update(input: UpdateProductRecord): Promise<any | null>;
   exists(entity: ProductEntityKind, id: string): Promise<boolean>;
+  /** Reasons a model cannot be physically deleted (empty array = deletable). */
+  modelDeletionBlockers(id: string): Promise<string[]>;
+  deleteModel(input: { id: string; expectedVersion: number; actorUserId: string }): Promise<boolean>;
 }

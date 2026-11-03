@@ -241,6 +241,30 @@ export class ProductService {
     return row;
   }
 
+  async deleteModel(actor: ProductActor, id: string, input: { expectedVersion: number }): Promise<{ deleted: true }> {
+    requireCapability(actor, ProductCapability.Write);
+    if (!input || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1)
+      throw new ProductValidationError('expectedVersion is required');
+    const blockers = await this.repository.modelDeletionBlockers(id);
+    if (blockers.length) {
+      const label: Record<string, string> = {
+        variants: '配置版本', bom: 'BOM', publication: '官网发布记录', homepage: '首页绑定',
+        skus: 'SKU', merge_alias: '历史合并别名',
+      };
+      throw new ProductConflictError(
+        `该车型已有${blockers.map(reason => label[reason] ?? reason).join('、')}，不能删除；请改为把状态设为“已退役”`);
+    }
+    await this.repository.transaction(async executor => {
+      const deleted = await this.repository.deleteModel({ id, expectedVersion: input.expectedVersion, actorUserId: actor.userId });
+      if (!deleted) {
+        if (!await this.repository.exists('model', id)) throw new ProductNotFoundError('Model not found');
+        throw new ProductConflictError('Model changed since it was loaded; refresh and retry');
+      }
+      await this.audit.record({ actorUserId: actor.userId, action: 'product.model_deleted', targetType: 'product.model', targetId: id, metadata: { expectedVersion: input.expectedVersion } }, executor);
+    });
+    return { deleted: true };
+  }
+
   async deleteModelField(actor: ProductActor,id:string,input:{expectedVersion:number}):Promise<ModelFieldDefinition & {affectedModels:number}> {
     requireCapability(actor, ProductCapability.Write);
     if(!input || !Number.isInteger(input.expectedVersion) || input.expectedVersion<1)
