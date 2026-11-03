@@ -31,7 +31,8 @@
 | 历史 Medusa/CRMEB 对比试验（已退役原生框架） | [历史交付记录](COMMERCE_SOURCE_DELIVERY_SCOPE_2026-10-26.md)；**现行商城**遵循 [Admin IA](ALSVID_ADMIN_IA.md) 与 [发布流程](RELEASE_FLOW.md)，不得恢复独立 PHP/MySQL/Vue 运行栈 |
 | 当前实施及验收证据 | [CURRENT_STATE.md](CURRENT_STATE.md)、关联 Issue/PR/具体提交 |
 | 多 AI / 多电脑交接 | [COLLABORATION.md](COLLABORATION.md) |
-| 部署流程 | [RELEASE_FLOW.md](RELEASE_FLOW.md) |
+| 测试入口 / Gateway / 运行拓扑 | [DEPLOYMENT.md](DEPLOYMENT.md) |
+| 生产发布、密钥与回滚 | [PRODUCTION_RUNBOOK.md](PRODUCTION_RUNBOOK.md) 与 [RELEASE_FLOW.md](RELEASE_FLOW.md) |
 | 产品类型/首页 ID | [PRODUCT_TYPES_HOME_BINDINGS_2026-10-22.md](PRODUCT_TYPES_HOME_BINDINGS_2026-10-22.md) |
 | 第三方仓 / WMS | [THIRD_PARTY_WAREHOUSE_INTEGRATION_2026-10-22.md](THIRD_PARTY_WAREHOUSE_INTEGRATION_2026-10-22.md) |
 
