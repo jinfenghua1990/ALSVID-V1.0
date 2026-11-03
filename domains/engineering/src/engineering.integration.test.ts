@@ -34,6 +34,12 @@ test('released BOM revisions and Build Specifications are immutable in PostgreSQ
       `INSERT INTO engineering.bom_revisions(bom_id, revision_code) VALUES ($1,'A') RETURNING id`,
       [bom.rows[0]!.id],
     );
+    // L1 uses an empty draft workspace until its parts are approved. Release must fail
+    // for ALL empty BOM revisions, not only the L1-specific record.
+    await assert.rejects(
+      db.query(`UPDATE engineering.bom_revisions SET status='RELEASED', released_at=now() WHERE id=$1`, [revision.rows[0]!.id]),
+      /without at least one BOM line/,
+    );
     await db.query(
       `INSERT INTO engineering.bom_lines(revision_id,line_no,part_id,quantity) VALUES ($1,10,$2,1)`,
       [revision.rows[0]!.id, part.rows[0]!.id],
