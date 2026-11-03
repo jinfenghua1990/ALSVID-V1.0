@@ -621,3 +621,9 @@
 .variantSkuForms button:disabled { cursor:not-allowed; opacity:.5; }
 .variantSkuDimensions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 @media(max-width:700px) { .variantSkuDialog { padding:16px; } .variantSkuHeader h2 { font-size:17px; } .variantSkuForms { grid-template-columns:minmax(0,1fr); } .variantSkuTable { min-width:620px; } }
+
+.createSteps { display:grid; gap:7px; padding:11px 13px; border:1px solid var(--alsvid-line); border-radius:8px; background:var(--alsvid-panel-2); color:var(--alsvid-text); font-size:12px; line-height:1.55; }
+.createSteps strong { font-size:12px; }
+.createSteps ol { margin:0; padding-left:19px; display:grid; gap:3px; }
+.createCard label small { color:var(--alsvid-muted); font-size:11px; font-weight:400; line-height:1.5; }
+.createWarning { margin:-5px 0 0; padding:9px 11px; border:1px solid var(--alsvid-line); border-radius:7px; background:var(--alsvid-panel-2); color:var(--alsvid-danger, #a33); font-size:12px; line-height:1.5; }

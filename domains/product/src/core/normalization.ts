@@ -36,6 +36,18 @@ export function normalizeMnemonicSku(value: string): string {
   return sku;
 }
 
+/** Derive the two-character vehicle SKU family prefix; null requires admin review. */
+export function deriveVehicleSkuPrefix(value: string): string | null {
+  if (typeof value !== 'string') return null;
+  const code = value.trim().toUpperCase();
+  if (!/^[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)?$/.test(code)) return null;
+  const segments = code.split('-');
+  if (segments.length === 2) return `${segments[0]![0]}${segments[1]![0]}`;
+  if (code.length === 2) return code;
+  if (/^[A-Z]{2}[A-Z0-9]+$/.test(code)) return code.slice(0, 2);
+  return null;
+}
+
 export function normalizeMnemonicPrefix(value: string): string {
   if (typeof value !== 'string') throw new ProductValidationError('SKU prefix must be text');
   const prefix = value.trim().toUpperCase();
