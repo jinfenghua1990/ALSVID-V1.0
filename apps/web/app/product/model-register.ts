@@ -15,6 +15,19 @@ type BuildSpec = { sku_id: string; code: string; status: string };
 type Catalog = { variants: readonly Variant[]; skus: readonly Sku[] };
 type Engineering = { boms: readonly Bom[]; buildSpecs: readonly BuildSpec[] };
 
+/** Employee-safe default for the two-character vehicle SKU family prefix.
+ * A1 -> A1; A1-ULTRA -> AU; L1-PRO -> LP; FC1 -> FC.
+ * Unknown shapes return null and must be reviewed by an administrator.
+ */
+export function deriveVehicleSkuPrefix(modelCode: string): string | null {
+  const code = modelCode.trim().toUpperCase();
+  if (/^[A-Z][A-Z0-9]$/.test(code)) return code;
+  const extended = /^([A-Z])[A-Z0-9]*-([A-Z])[A-Z0-9]*$/.exec(code);
+  if (extended) return `${extended[1]}${extended[2]}`;
+  const compact = /^([A-Z]{2})[A-Z0-9]*$/.exec(code);
+  return compact?.[1] ?? null;
+}
+
 export function modelEngineeringStage(modelId: string, catalog: Catalog, engineering: Engineering): string {
   const variantIds = new Set(catalog.variants.filter((variant) => variant.model_id === modelId).map((variant) => variant.id));
   const skuIds = new Set(catalog.skus.filter((sku) => variantIds.has(sku.variant_id)).map((sku) => sku.id));

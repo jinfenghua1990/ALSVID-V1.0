@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './product.module.css';
 import { adminSkuPricingHref } from '../_lib/admin-sku-pricing-navigation';
 import { findActiveSkuCombinationDuplicates } from './sku-combination-audit';
-import { matchesModelRegisterSearch } from './model-register';
+import { deriveVehicleSkuPrefix, matchesModelRegisterSearch } from './model-register';
 import { emptyTechnicalSpecs, technicalSpecModules, technicalSpecProgress, technicalSpecValue, type TechnicalSpecs } from './technical-specs';
 
 type CustomFieldDefinition = { id:string; product_type_code:'BIKE'|'ACCESSORY'|'SERVICE_PART'; code:string;
@@ -183,6 +183,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
   const [workspace, setWorkspace] = useState<'bikes' | 'models' | 'parts' | 'platforms'>('bikes');
   const [partTab, setPartTab] = useState<'manufacturing' | 'retail'>('manufacturing');
   const [createKind, setCreateKind] = useState<'bike' | 'part' | 'accessory' | null>(null);
+  const [newBikeCode, setNewBikeCode] = useState('');
   const [specModel, setSpecModel] = useState<Model | null>(null);
   const [specDraft, setSpecDraft] = useState<TechnicalSpecs>(emptyTechnicalSpecs);
   const [savingSpecs, setSavingSpecs] = useState(false);
@@ -200,7 +201,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
           : id === 'parts' || requestedType === 'PARTS' ? 'parts' : 'bikes';
         setWorkspace(nextWorkspace);
         setTypeFilter(nextWorkspace === 'bikes' || nextWorkspace === 'models' ? 'BIKE' : requestedType === 'PARTS' ? 'PARTS' : 'ALL');
-        if (id === 'configuration') setCreateKind('bike');
+        if (id === 'configuration') { setNewBikeCode(''); setCreateKind('bike'); }
       }
       // Preserve old bookmarks without offering a second BOM editor in product research.
       if (view === 'archive' && ['engineering', 'engineering-panel', 'production-bom'].includes(id)) {
@@ -342,6 +343,16 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
     && [platform.code, platform.name, platform.description].some(value => (value || '').toLocaleLowerCase().includes(modelSearch.toLocaleLowerCase()))
   ), [catalog.platforms, modelSearch, platformStatusFilter]);
 
+  const normalizedNewBikeCode = newBikeCode.trim().toUpperCase();
+  const suggestedBikeSkuPrefix = deriveVehicleSkuPrefix(normalizedNewBikeCode);
+  const duplicateBikeCode = !!normalizedNewBikeCode && catalog.models.some(model =>
+    model.product_type_code === 'BIKE' && model.code.toUpperCase() === normalizedNewBikeCode);
+  const bikePrefixOwner = suggestedBikeSkuPrefix ? catalog.models.find(model =>
+    model.product_type_code === 'BIKE' && model.sku_prefix === suggestedBikeSkuPrefix
+      && model.code.toUpperCase() !== normalizedNewBikeCode) : undefined;
+  const bikeRegistrationBlocked = createKind === 'bike'
+    && (!suggestedBikeSkuPrefix || duplicateBikeCode || !!bikePrefixOwner);
+
   async function submitForm(event: FormEvent<HTMLFormElement>, endpoint: string, body: (form: FormData) => unknown, onSaved?: () => void) {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -479,7 +490,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
           </div>
           <div className={styles.archiveHeadingActions}>
             <button type="button" className={styles.archiveSecondaryButton} onClick={() => void reload()} disabled={loading}>刷新</button>
-            {workspace === 'bikes' || workspace === 'models' ? <button type="button" className={styles.archivePrimaryButton} onClick={() => {setNewModelType('BIKE');setCreateKind('bike');}}>＋ 新建整车</button> : null}
+            {workspace === 'bikes' || workspace === 'models' ? <button type="button" className={styles.archivePrimaryButton} onClick={() => {setNewModelType('BIKE');setNewBikeCode('');setCreateKind('bike');}}>＋ 新建整车</button> : null}
             {workspace === 'platforms' ? <button type="button" className={styles.archivePrimaryButton} disabled={loading || !!catalogError} onClick={() => setPlatformDraft('new')}>＋ 新建技术平台</button> : null}
             {workspace === 'parts' ? <button type="button" className={styles.archivePrimaryButton} onClick={() => { if (partTab === 'manufacturing') setCreateKind('part'); else {setNewModelType('ACCESSORY');setCreateKind('accessory');} }}>＋ {partTab === 'manufacturing' ? '新建零件' : '新建可售配件'}</button> : null}
           </div>
@@ -680,12 +691,12 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                 {partNumber: form.get('partNumber'), name: form.get('name'), category: form.get('category'), defaultUnit: form.get('defaultUnit')} :
                 {productTypeCode: createKind === 'bike' ? 'BIKE' : form.get('productTypeCode'),
                  seriesId: createKind === 'bike' ? form.get('seriesId') : null,
-                 code: form.get('code'), skuPrefix: form.get('skuPrefix'), name: form.get('name'), description: form.get('description'),
+                 code: form.get('code'), skuPrefix: createKind === 'bike' ? null : form.get('skuPrefix'), name: form.get('name'), description: form.get('description'),
                  customFields:readModelFields(form,(catalog.modelFieldDefinitions??[]).filter(def=>
                    def.product_type_code===(createKind==='bike'?'BIKE':newModelType)))},
               () => setCreateKind(null))}>
             <div className={styles.createCardHeading}>
-              <div><span>商品档案</span><h2>{createKind === 'bike' ? '新建整车' : createKind === 'part' ? '新建生产零件' : '新建可售配件'}</h2><p>填写基础信息后保存；商品 ID 由系统自动分配六位数字，永久不变。SKU 采用 A1-EBI-BLK 形式，数字商品 ID 只作为内部数据库身份；保存档案不会自动建立颜色 SKU、BOM 或商城绑定。</p></div>
+              <div><span>{createKind === 'bike' ? '产品研发 / 整车产品' : '商品档案'}</span><h2>{createKind === 'bike' ? '新建整车档案' : createKind === 'part' ? '新建生产零件' : '新建可售配件'}</h2><p>{createKind === 'bike' ? '按下面步骤填写即可。商品 ID 由系统自动分配；SKU 前缀由车型代号自动生成，颜色和配置 SKU 在后续「版本与 SKU」中维护。本表单只建立车型主档，不会自动创建 BOM 或发布官网。' : '填写基础信息后保存；商品 ID 由系统自动分配，永久不变。SKU、BOM 和商城绑定按各自流程维护。'}</p></div>
               <button type="button" className={styles.createClose} aria-label="关闭" onClick={() => setCreateKind(null)}>×</button>
             </div>
             {createKind === 'part' ? (
@@ -702,24 +713,57 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                   </select></label>
                 ) : (
                   <label>产品系列 <select name="seriesId" defaultValue="" required><option value="" disabled>选择产品系列</option>{(catalog.series??[]).filter(s => s.status === 'ACTIVE').map(s => <option key={s.id} value={s.id}>{s.name_zh} · {s.code}</option>)}</select>
-                    <small>例：折叠系列 · FC。系列是产品分类；电驱、车架等技术参数另外维护。</small>
+                    <small>选择产品家族，例如「折叠系列 · FC」。系列不是技术平台；工程平台由系列配置关联，车架、电驱等参数在后续技术规格中维护。</small>
                   </label>
                 )}
                 {createKind === 'bike' && !(catalog.series??[]).some(s => s.status === 'ACTIVE') ? <p className={styles.archiveError}>目前没有已启用的产品系列，无法创建整车。</p> : null}
                 {createKind === 'accessory' && !selectableProductTypes.some(type => type.code !== 'BIKE') ? <p className={styles.archiveError}>当前商品类型接口尚未提供可售配件类型，无法创建。</p> : null}
-                <label>{createKind === 'bike' ? '车型代号' : '商品编码'} <input name="code" autoFocus required maxLength={32} pattern="[A-Za-z0-9][A-Za-z0-9-]*" placeholder={createKind === 'bike' ? '如 A2、A1-ULTRA' : '输入唯一商品编码'} /></label>
-                <label>SKU 归属前缀（2 位）<input name="skuPrefix" required maxLength={2} pattern="[A-Za-z][A-Za-z0-9]" placeholder={createKind === 'bike' ? '如 A2、AU（车型独占）' : '如 A1、AL、UN'} />
-                  <small>只确定 SKU 家族；整车颜色稍后在「版本与 SKU」维护。长车型名（如 A1-ULTRA）必须使用独立前缀（如 AU）。</small>
+                {createKind === 'bike' ? <div className={styles.createSteps}>
+                  <strong>员工建档顺序</strong>
+                  <ol>
+                    <li>先选正确的产品系列</li>
+                    <li>填写公司已确认的车型代号</li>
+                    <li>核对系统自动生成的 SKU 前缀</li>
+                    <li>按统一格式填写商品名称，然后保存</li>
+                  </ol>
+                </div> : null}
+                <label>{createKind === 'bike' ? '车型代号' : '商品编码'}
+                  <input name="code" autoFocus required maxLength={32}
+                    pattern={createKind === 'bike' ? '[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z][A-Za-z0-9]*)?' : '[A-Za-z0-9][A-Za-z0-9-]*'}
+                    placeholder={createKind === 'bike' ? '如 A2、A1-ULTRA' : '输入唯一商品编码'}
+                    value={createKind === 'bike' ? newBikeCode : undefined}
+                    onChange={createKind === 'bike' ? event => setNewBikeCode(event.target.value.toUpperCase()) : undefined}
+                    autoCapitalize="characters" />
+                  {createKind === 'bike' ? <small>只填写正式车型代号，不要填写商品 ID、颜色或 SKU。系统会自动转为大写。</small> : null}
                 </label>
-                <label>商品名称 <input name="name" required maxLength={160} placeholder="输入商品名称" /></label>
-                <label>说明（可选） <textarea name="description" rows={3} placeholder="简要描述商品" /></label>
+                {createKind === 'bike' ? (
+                  <>
+                    <label>SKU 归属前缀（系统自动生成）
+                      <input value={suggestedBikeSkuPrefix ?? ''} readOnly placeholder="填写车型代号后自动生成" />
+                      <small>固定规则：A1 → A1；A1-ULTRA → AU；L1-PRO → LP；FC1 → FC。员工不需要填写或修改。</small>
+                    </label>
+                    {duplicateBikeCode ? <p className={styles.createWarning}>这个车型代号已经建档，请先搜索现有车型，避免重复创建。</p> : null}
+                    {bikePrefixOwner ? <p className={styles.createWarning}>自动生成的前缀 {suggestedBikeSkuPrefix} 已被车型 {bikePrefixOwner.code} 使用。请联系管理员确认编码，不要自行更改。</p> : null}
+                    {normalizedNewBikeCode && !suggestedBikeSkuPrefix ? <p className={styles.createWarning}>这个车型代号暂时无法按标准规则生成 SKU 前缀。请联系管理员确认车型代号和专属前缀后再建档。</p> : null}
+                  </>
+                ) : (
+                  <label>SKU 归属前缀（2 位）
+                    <input name="skuPrefix" required maxLength={2} pattern="[A-Za-z][A-Za-z0-9]" placeholder="如 A1、AL、UN" />
+                    <small>配件按归属填写：车型专属用车型前缀，ALSVID 多车型共用用 AL，通用周边用 UN。</small>
+                  </label>
+                )}
+                <label>商品名称
+                  <input name="name" required maxLength={160} placeholder={createKind === 'bike' ? '例如：ALSVID A2 折叠电动自行车' : '输入商品名称'} />
+                  {createKind === 'bike' ? <small>统一格式：ALSVID + 车型代号 + 产品类别。例：ALSVID A2 折叠电动自行车。</small> : null}
+                </label>
+                <label>说明（可选） <textarea name="description" rows={3} placeholder="填写产品定位、主要用途或特殊说明；没有可留空" /></label>
                 <ModelFieldInputs key={createKind==='bike'?'BIKE':newModelType} definitions={(catalog.modelFieldDefinitions??[])
                   .filter(def=>def.product_type_code===(createKind==='bike'?'BIKE':newModelType))}/>
               </>
             )}
             <div className={styles.createActions}>
               <button type="button" className={styles.archiveSecondaryButton} onClick={() => setCreateKind(null)}>取消</button>
-              <button type="submit" className={styles.archivePrimaryButton} disabled={(createKind === 'bike' && !(catalog.series??[]).some(s => s.status === 'ACTIVE')) || (createKind === 'accessory' && !selectableProductTypes.some(type => type.code !== 'BIKE'))}>保存档案</button>
+              <button type="submit" className={styles.archivePrimaryButton} disabled={(createKind === 'bike' && (!(catalog.series??[]).some(s => s.status === 'ACTIVE') || bikeRegistrationBlocked)) || (createKind === 'accessory' && !selectableProductTypes.some(type => type.code !== 'BIKE'))}>保存档案</button>
             </div>
           </form>
         </div>
