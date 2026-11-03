@@ -34,4 +34,6 @@
 ## 验证
 
 - 决策当日本地 `main` 与 `origin/main` 同为 `6c77e864`，工作区干净，无未推送提交，切换起点无遗留。
-- 首跑证据：`scripts/local-backup.ps1` 首次执行结果、`backup/local` 指向的 SHA，以及"`main` 未被推送、Actions 无新增运行"的记录，写入执行该次备份的提交说明或交接记录；未拿到该证据前不得宣称备份已生效。
+- 首跑证据（2026-11-03 23:31 本地）：`scripts/local-backup.ps1` 成功提交 6 个文件并推送 `backup/local` 与快照 `backup/local-20261103-233148`，两者均指向 `f5a5c0e0`；`git ls-remote` 确认远端 `refs/heads/main` 仍为 `6c77e864`，本地 `main` 领先 1 个未推送提交（符合预期）。
+- 未触发流程的证据：GitHub Actions 最近一次运行仍是 `2026-11-03T12:22:23Z` 的 ALSVID Production Deploy，备份推送之后没有任何新 run。
+- 脚本在 `.git/index.lock` 存在时会拒绝执行并给出等待指引（首跑期间实测拦住过一次残留锁）；确认无 git 进程且属残留后才手工删除。
