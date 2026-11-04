@@ -2,6 +2,8 @@ export const ServiceCaseCapabilities = { Read: 'service.read', Write: 'service.w
 export const ServiceCaseStatuses = ['NEW','TRIAGED','IN_PROGRESS','RESOLVED','CLOSED'] as const;
 export type ServiceCaseStatus = (typeof ServiceCaseStatuses)[number];
 export type ServiceCaseCategory = 'ISSUE'|'WARRANTY_REVIEW'|'REPAIR_REQUEST';
+/** OWNER = submitted by the verified owner through My ALSVID; INTERNAL = registered by staff. */
+export type ServiceCaseSource = 'OWNER'|'INTERNAL';
 export interface ServiceCase {
   id: string;
   caseNumber: string;
@@ -12,6 +14,7 @@ export interface ServiceCase {
   title: string;
   description: string;
   status: ServiceCaseStatus;
+  source: ServiceCaseSource;
   version: number;
   createdAt: string;
   updatedAt: string;

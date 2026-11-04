@@ -35,7 +35,8 @@ function fixture() {
   recordOwnerSubmission:async(user,requestId,id,cid,payload)=>{submissions.set(user+':'+requestId,{vehicleId:id,caseId:cid,...payload});},
   create:async(input,actor)=>{
    current={id:caseId,caseNumber:'SR-00000001',vehicleId:input.vehicleId,frameNumber:'FC1-001',sku:'FC1',
-    category:input.category,title:input.title,description:input.description??'',status:'NEW',version:1,createdAt:'2026-10-01T00:00:00Z',updatedAt:'2026-10-01T00:00:00Z'};
+    category:input.category,title:input.title,description:input.description??'',status:'NEW',
+    source:actor===ownerUser?'OWNER':'INTERNAL',version:1,createdAt:'2026-10-01T00:00:00Z',updatedAt:'2026-10-01T00:00:00Z'};
    assert.ok(actor===internal.userId||actor===ownerUser);
    return current;
   },
@@ -178,4 +179,20 @@ test('owner submissions reject unowned VIN, dealer role and revoked access',asyn
  await assert.rejects(f.service.ownerCreateCase(ownerActor,input),ServiceCaseNotFoundError);
  assert.equal(f.submissions.size,0);
  assert.equal(f.audits.length,0);
+});
+
+test('case listing marks owner submissions apart from internal registrations',async()=>{
+ const {PostgresServiceCaseRepository}=await import('./infrastructure/postgres-service-case-repository.js');
+ const statements:string[]=[];
+ const fakeDb={query:async(sql:string)=>{
+  statements.push(sql);
+  return {rows:[{id:'11111111-1111-4111-8111-111111111111',case_number:'SR-00000001',
+   vehicle_id:'22222222-2222-4222-8222-222222222222',frame_number:'FC1-001',sku:'FC1',
+   category:'ISSUE',title:'制动异响',description:'',status:'NEW',source:'OWNER',version:1,
+   created_at:new Date('2026-10-01T00:00:00Z'),updated_at:new Date('2026-10-01T00:00:00Z')}]};
+ }};
+ const repository=new PostgresServiceCaseRepository(fakeDb as never);
+ const [row]=await repository.list();
+ assert.equal(row?.source,'OWNER');
+ assert.match(statements[0]!,/LEFT JOIN service\.owner_submission_requests o ON o\.case_id=c\.id/);
 });

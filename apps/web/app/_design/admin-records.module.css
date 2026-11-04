@@ -15,4 +15,5 @@
 .error { color: var(--av-bad); background: var(--av-bad-soft); border-radius: 8px; padding: 12px; font-size: 13px; }
 .linkButton { cursor: pointer; border: 0; background: transparent; color: var(--av-brand); font: inherit; text-decoration: underline; padding: 6px 0; }
 .detail { background: var(--av-panel-soft); border: 1px solid var(--av-line); border-radius: 8px; padding: 16px; margin-top: 16px; overflow-wrap: anywhere; }
+.tag { display: inline-flex; align-items: center; padding: 3px 9px; border: 1px solid var(--av-line); border-radius: 999px; background: var(--av-panel-soft); color: var(--av-text-soft); font-size: 12px; white-space: nowrap; }
 @media (max-width: 640px) { .table { min-width: 520px; } .heading { align-items: stretch; } .heading > button { flex: 0 1 auto; } .search { width: 100%; } }

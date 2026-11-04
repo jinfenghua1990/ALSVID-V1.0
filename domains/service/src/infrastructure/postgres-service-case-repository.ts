@@ -1,12 +1,12 @@
 import type { DatabasePort, QueryExecutor } from '@alsvid/database';
-import type { CreateServiceCaseInput, ServiceCase, ServiceCaseHistory, ServiceCaseStatus, ServiceCaseCategory, OwnerServiceCase, ServiceActivity, RecordServiceActivityInput, PreliminaryWarrantyAssessment, ServiceActivityKind } from '../core/model.js';
+import type { CreateServiceCaseInput, ServiceCase, ServiceCaseHistory, ServiceCaseStatus, ServiceCaseCategory, ServiceCaseSource, OwnerServiceCase, ServiceActivity, RecordServiceActivityInput, PreliminaryWarrantyAssessment, ServiceActivityKind } from '../core/model.js';
 import { ServiceCaseConflictError } from '../core/errors.js';
 import type { ServiceCaseRepository } from '../application/ports.js';
 
 type CaseRow = {
  id:string;case_number:string;vehicle_id:string;frame_number:string;sku:string;
  category:ServiceCase['category'];title:string;description:string;status:ServiceCaseStatus;
- version:number;created_at:Date;updated_at:Date;
+ source:ServiceCaseSource;version:number;created_at:Date;updated_at:Date;
 };
 type HistoryRow = {
  id:string;case_id:string;from_status:ServiceCaseStatus|null;to_status:ServiceCaseStatus;
@@ -24,14 +24,22 @@ function mapActivity(row:ActivityRow):ServiceActivity {
  };
 }
 const selectActivity='SELECT id,case_id,client_request_id,kind,note,labor_minutes,assessment,actor_user_id,occurred_at FROM service.case_activities';
-const selectCases = 'SELECT c.*,v.frame_number,s.sku FROM service.cases c JOIN vehicle.vehicles v ON v.id=c.vehicle_id JOIN product.skus s ON s.id=v.sku_id';
+// The owner submission row is the only proof that a case came from My ALSVID; a case
+// without it was registered by internal staff.
+const selectCases = `SELECT c.*,v.frame_number,s.sku,
+  CASE WHEN o.id IS NULL THEN 'INTERNAL' ELSE 'OWNER' END AS source
+  FROM service.cases c
+  JOIN vehicle.vehicles v ON v.id=c.vehicle_id
+  JOIN product.skus s ON s.id=v.sku_id
+  LEFT JOIN service.owner_submission_requests o ON o.case_id=c.id`;
 function mapCase(row:CaseRow):ServiceCase {
- return {
-  id:row.id,caseNumber:row.case_number,vehicleId:row.vehicle_id,
-  frameNumber:row.frame_number,sku:row.sku,category:row.category,
-  title:row.title,description:row.description,status:row.status,
-  version:row.version,createdAt:row.created_at.toISOString(),updatedAt:row.updated_at.toISOString()
- };
+  return {
+    id:row.id,caseNumber:row.case_number,vehicleId:row.vehicle_id,
+    frameNumber:row.frame_number,sku:row.sku,category:row.category,
+    title:row.title,description:row.description,status:row.status,
+    source:row.source ?? 'INTERNAL',
+    version:row.version,createdAt:row.created_at.toISOString(),updatedAt:row.updated_at.toISOString()
+  };
 }
 export class PostgresServiceCaseRepository implements ServiceCaseRepository {
  constructor(private readonly db:DatabasePort){}

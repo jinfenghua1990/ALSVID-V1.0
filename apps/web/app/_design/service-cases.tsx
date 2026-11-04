@@ -6,9 +6,10 @@ import { adminRecordHref, queryRecordId } from './record-links';
 
 type CaseStatus = 'NEW'|'TRIAGED'|'IN_PROGRESS'|'RESOLVED'|'CLOSED';
 type CaseCategory = 'ISSUE'|'WARRANTY_REVIEW'|'REPAIR_REQUEST';
+type CaseSource = 'OWNER'|'INTERNAL';
 type CaseRow = {
  id:string;caseNumber:string;vehicleId:string;frameNumber:string;sku:string;
- title:string;description:string;category:CaseCategory;status:CaseStatus;version:number;
+ title:string;description:string;category:CaseCategory;status:CaseStatus;source:CaseSource;version:number;
  createdAt:string;updatedAt:string;
 };
 type ActivityKind = 'DIAGNOSIS'|'REPAIR_NOTE'|'WARRANTY_ASSESSMENT';
@@ -19,6 +20,7 @@ type VehicleRow = { id:string;frame_number:string;sku:string };
 type HistoryRow = { id:string;caseVersion:number;fromStatus:CaseStatus|null;toStatus:CaseStatus;reason:string;occurredAt:string;actorUserId:string };
 const states:Record<CaseStatus,string> = { NEW:'待受理',TRIAGED:'已分诊',IN_PROGRESS:'处理中',RESOLVED:'已解决（待确认）',CLOSED:'已关闭' };
 const categories:Record<CaseCategory,string> = {ISSUE:'车辆问题',WARRANTY_REVIEW:'保修待审核',REPAIR_REQUEST:'维修申请'};
+const sources:Record<CaseSource,string> = {OWNER:'车主报修',INTERNAL:'内部登记'};
 const nextStatus:Record<CaseStatus,CaseStatus[]> = {NEW:['TRIAGED'],TRIAGED:['IN_PROGRESS'],IN_PROGRESS:['RESOLVED'],RESOLVED:['IN_PROGRESS','CLOSED'],CLOSED:[]};
 
 async function api<T>(path:string,method='GET',body?:unknown):Promise<T> {
@@ -44,8 +46,11 @@ function occurred(value:string){const n=Date.parse(value);return Number.isNaN(n)
 export function ServiceCaseClient() {
  const [cases,setCases]=useState<CaseRow[]>([]);
  const [queueFilter,setQueueFilter]=useState<'ALL'|'NEW'|'TRIAGED'|'IN_PROGRESS'|'RESOLVED'|'CLOSED'>('ALL');
+ const [sourceFilter,setSourceFilter]=useState<'ALL'|'OWNER'|'INTERNAL'>('ALL');
  const [caseQuery,setCaseQuery]=useState('');
- const filteredCases=cases.filter(c=>(queueFilter==='ALL'||c.status===queueFilter)&&[c.caseNumber,c.frameNumber,c.sku,c.title].some(v=>v.toLowerCase().includes(caseQuery.trim().toLowerCase())));
+ const filteredCases=cases.filter(c=>(queueFilter==='ALL'||c.status===queueFilter)
+  &&(sourceFilter==='ALL'||(c.source??'INTERNAL')===sourceFilter)
+  &&[c.caseNumber,c.frameNumber,c.sku,c.title].some(v=>v.toLowerCase().includes(caseQuery.trim().toLowerCase())));
  const queueCounts=Object.fromEntries((['NEW','TRIAGED','IN_PROGRESS','RESOLVED','CLOSED'] as CaseStatus[]).map(key=>[key,cases.filter(c=>c.status===key).length])) as Record<CaseStatus,number>;
  const [vehicles,setVehicles]=useState<VehicleRow[]>([]);
  const [intakeVehicleId,setIntakeVehicleId]=useState('');
@@ -165,14 +170,22 @@ export function ServiceCaseClient() {
      {([['ALL','全部'],['NEW','待受理'],['TRIAGED','已分诊'],['IN_PROGRESS','处理中'],['RESOLVED','待确认'],['CLOSED','已关闭']] as const).map(([key,label])=><button key={key} type="button" className="av-btn" aria-pressed={queueFilter===key} onClick={()=>setQueueFilter(key)}>{label} · {key==='ALL'?cases.length:queueCounts[key]}</button>)}
     </div>
     <label>搜索工单号、车架号、SKU 或标题<input className={styles.search} type="search" value={caseQuery} onChange={event=>setCaseQuery(event.target.value)} placeholder="筛选当前已读取的真实工单" /></label>
+    <label>来源
+     <select className={styles.search} value={sourceFilter} onChange={event=>setSourceFilter(event.target.value as 'ALL'|'OWNER'|'INTERNAL')}>
+      <option value="ALL">全部来源</option>
+      <option value="OWNER">车主报修</option>
+      <option value="INTERNAL">内部登记</option>
+     </select>
+    </label>
     <p className={styles.muted}>当前显示 {filteredCases.length} / {cases.length} 条；仅筛选已读取记录，未接入负责人及 SLA 时不展示虚构的待分配或超时数量。</p>
    </div>:null}
    {status==='loading'?<p role="status">正在读取真实售后记录…</p>:status==='error'?<p role="alert" className={styles.error}>{message}（不能将失败视作 0 条）</p>:<>
     {filteredCases.length?<div className={styles.tableScroll}>
      <table className={styles.table}>
-      <thead><tr><th>工单号</th><th>车辆</th><th>分类 / 标题</th><th>状态</th><th>操作</th></tr></thead>
+      <thead><tr><th>工单号</th><th>车辆</th><th>分类 / 标题</th><th>来源</th><th>状态</th><th>操作</th></tr></thead>
       <tbody>{filteredCases.map(c=><tr key={c.id}>
        <td><a href={adminRecordHref('service',c.id)}>{c.caseNumber}</a></td><td><a href={adminRecordHref('vehicle',c.vehicleId)}>{c.frameNumber}</a> · {c.sku}</td><td>{categories[c.category]} · {c.title}</td>
+       <td><span className={styles.tag}>{sources[c.source??'INTERNAL']}</span></td>
        <td>{states[c.status]}</td><td><a href={adminRecordHref('service',c.id)} className={styles.linkButton}>查看 / 处理</a></td>
       </tr>)}</tbody>
      </table>
@@ -208,7 +221,7 @@ export function ServiceCaseClient() {
    {message?<p role="alert" className={styles.error}>{message}</p>:null}
    {requestedCaseId&&status==='ready'&&!cases.some(row=>row.id===requestedCaseId)?<p role="status" className={styles.notice}>此链接定位的工单未出现在最近 200 条列表中；正在通过工单 ID 查询详情，若无权限或不存在将显示错误。</p>:null}
    {!detail?<p>正在读取详情…</p>:<>
-    <p><strong>{detail.case.caseNumber}</strong> · <a href={adminRecordHref('vehicle',detail.case.vehicleId)}>{detail.case.frameNumber}（查看车辆）</a> · {states[detail.case.status]} · 版本 {detail.case.version}</p>
+    <p><strong>{detail.case.caseNumber}</strong> · <a href={adminRecordHref('vehicle',detail.case.vehicleId)}>{detail.case.frameNumber}（查看车辆）</a> · <span className={styles.tag}>{sources[detail.case.source??'INTERNAL']}</span> · {states[detail.case.status]} · 版本 {detail.case.version}</p>
     <p><a href={adminRecordHref('service',detail.case.id)}>复制 / 打开此工单专属链接 →</a></p>
     <p>{detail.case.title}</p><p className={styles.muted}>{detail.case.description||'没有额外说明'}</p>
     {nextStatus[detail.case.status].length?<div className={styles.stack}>

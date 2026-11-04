@@ -2,13 +2,10 @@ import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { Database } from './index.js';
 import { orderedMigrationFiles } from './migration-order.js';
+import { checksumOf } from './migration-checksum.js';
 
 const database = new Database();
 const migrationsUrl = new URL('../migrations/', import.meta.url);
-
-function checksumOf(sql: string): string {
-  return createHash('sha256').update(sql).digest('hex');
-}
 
 async function migrate(): Promise<void> {
   // pg_advisory_lock is session-scoped: the lock and the unlock must run on the
