@@ -658,7 +658,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
         ) : null}
 
         {workspace === 'platforms' ? (
-          <section id="product-types" className={styles.archivePanel} aria-label="技术平台管理">
+          <section id="product-types" className={`${styles.archivePanel} ${styles.platformArchive}`} aria-label="技术平台管理">
             <div className={styles.archivePanelTitle} id="series"><div><h2>技术平台档案</h2><p>技术平台用于归类整车，不和销售 SKU 混用</p></div><span>{loading || catalogError ? '—' : catalog.platforms.length} 条记录</span></div>
             <div className={styles.archiveFilters}><label className={styles.archiveSearch}><span className={styles.srOnly}>搜索技术平台</span><input value={modelSearch} onChange={event => setModelSearch(event.target.value)} placeholder="搜索平台名称、编码或说明" aria-label="搜索技术平台" /></label>
               <select aria-label="按技术平台状态筛选" value={platformStatusFilter} onChange={event => setPlatformStatusFilter(event.target.value)}><option value="ALL">全部状态</option><option value="DRAFT">草稿</option><option value="ACTIVE">启用</option><option value="RETIRED">已归档</option></select>

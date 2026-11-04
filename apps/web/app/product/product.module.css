@@ -627,3 +627,18 @@
 .createSteps ol { margin:0; padding-left:19px; display:grid; gap:3px; }
 .createCard label small { color:var(--alsvid-muted); font-size:11px; font-weight:400; line-height:1.5; }
 .createWarning { margin:-5px 0 0; padding:9px 11px; border:1px solid var(--alsvid-line); border-radius:7px; background:var(--alsvid-panel-2); color:var(--alsvid-danger, #a33); font-size:12px; line-height:1.5; }
+
+/* Technical platform archive */
+.platformArchive { margin-top: 24px; }
+.platformArchive .archivePanelTitle { margin-bottom: 20px; align-items: flex-end; }
+.platformArchive .archivePanelTitle h2 { font-size: 19px; letter-spacing: -.02em; }
+.platformArchive .archivePanelTitle p { margin-top: 6px; font-size: 13px; }
+.platformArchive .archivePanelTitle > span { padding: 5px 10px; border: 1px solid var(--alsvid-line); border-radius: 999px; background: var(--alsvid-panel-2); }
+.platformArchive .archiveFilters { margin-bottom: 18px; }
+.platformArchive .archiveFilters input, .platformArchive .archiveFilters select { min-height: 44px; border-radius: 9px; }
+.platformArchive .platformTableWrap { border-radius: 12px; }
+.platformArchive .platformTable th { padding: 13px 18px; letter-spacing: .02em; }
+.platformArchive .platformTable td { padding: 18px; }
+.platformArchive .platformTable td:first-child strong { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; min-height: 34px; padding: 0 8px; border-radius: 8px; background: var(--alsvid-accent-soft); color: var(--alsvid-accent); box-sizing: border-box; }
+.platformArchive .archiveStatus { border-radius: 999px; padding: 4px 10px; }
+.platformArchive .archiveFootnote { max-width: 900px; margin-top: 18px; padding-left: 12px; border-left: 3px solid var(--alsvid-line-strong); }
