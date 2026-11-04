@@ -518,7 +518,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
           <section className={styles.archivePanel} id="vehicle-models" aria-label="车辆型号列表">
             {!specModel ? <>
               <div className={styles.archivePanelTitle}>
-                <div><h2>车辆型号</h2><p>型号来自已新建的整车，使用型号简称归类，不预设型号。</p></div>
+                <div><p>型号来自已新建的整车，使用型号简称归类，不预设型号。</p></div>
                 <span>{loading || catalogError ? '—' : catalog.models.filter(model => model.product_type_code === 'BIKE').length} 条记录</span>
               </div>
               <div className={styles.archiveFilters}>
@@ -577,7 +577,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
         {workspace === 'bikes' ? (
           <section className={styles.archivePanel} id="vehicle-details" aria-label="整车产品列表">
             <div className={styles.archivePanelTitle}>
-              <div><h2>整车产品</h2><p>全部整车一行一条，汇总型号、平台、规格、市场和配置状态。</p></div>
+              <div><p>全部整车一行一条，汇总型号、平台、规格、市场和配置状态。</p></div>
               <span>{loading || catalogError ? '—' : catalog.models.filter(model => model.product_type_code === 'BIKE').length} 条记录</span>
             </div>
             <div className={styles.archiveFilters}>
@@ -624,7 +624,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
         {workspace === 'parts' ? (
           <section className={styles.archivePanel} id="parts-library-panel" aria-label="零配件管理">
             <div className={styles.archivePanelTitle}>
-              <div><h2>零配件档案</h2><p>生产零件与可售配件使用各自既有数据源</p></div>
+              <div><p>生产零件与可售配件使用各自既有数据源</p></div>
               <span>{loading || (partTab === 'manufacturing' ? engineeringError : catalogError) ? '—' : (partTab === 'manufacturing' ? engineering.parts.length : catalog.models.filter(model => model.product_type_code !== 'BIKE').length)} 条记录</span>
             </div>
             <div className={styles.archiveSubtabs} role="group" aria-label="零配件类型">
@@ -659,7 +659,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
 
         {workspace === 'platforms' ? (
           <section id="product-types" className={`${styles.archivePanel} ${styles.platformArchive}`} aria-label="技术平台管理">
-            <div className={styles.archivePanelTitle} id="series"><div><h2>技术平台档案</h2><p>技术平台用于归类整车，不和销售 SKU 混用</p></div><span>{loading || catalogError ? '—' : catalog.platforms.length} 条记录</span></div>
+            <div className={styles.archivePanelTitle} id="series"><div><p>技术平台用于归类整车，不和销售 SKU 混用</p></div><span>{loading || catalogError ? '—' : catalog.platforms.length} 条记录</span></div>
             <div className={styles.archiveFilters}><label className={styles.archiveSearch}><span className={styles.srOnly}>搜索技术平台</span><input value={modelSearch} onChange={event => setModelSearch(event.target.value)} placeholder="搜索平台名称、编码或说明" aria-label="搜索技术平台" /></label>
               <select aria-label="按技术平台状态筛选" value={platformStatusFilter} onChange={event => setPlatformStatusFilter(event.target.value)}><option value="ALL">全部状态</option><option value="DRAFT">草稿</option><option value="ACTIVE">启用</option><option value="RETIRED">已归档</option></select>
             </div>
