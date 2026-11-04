@@ -17,6 +17,7 @@ function setup(options:{platformActive?:boolean;duplicate?:boolean;linkedModels?
   let linked=options.linkedModels ?? false;
   const events:string[]=[];
   const repository={
+    transaction:async<T>(work:(executor:unknown)=>Promise<T>)=>work({query:async()=>({rows:[]})}),
     platformIsActive:async(id:string)=>platformActive && id===platformId,
     listSeries:async()=>[{...row}],
     createSeries:async(input:{code:string;nameZh:string;nameEn:string;status:ProductSeriesRow['status'];defaultPlatformId:string})=>{
@@ -36,7 +37,7 @@ function setup(options:{platformActive?:boolean;duplicate?:boolean;linkedModels?
   } as unknown as ProductRepository;
   const audit:ProductAuditPort={record:async(event)=>{events.push(event.action);}};
   return {
-    service:new ProductService(repository,audit),events,
+    service:new ProductService(repository,audit),events,repository,
     setPlatformActive:(flag:boolean)=>{platformActive=flag;},
     setLinked:(flag:boolean)=>{linked=flag;},
   };
@@ -90,6 +91,14 @@ test('linked bike models block archiving a series and unknown series give not-fo
   const archived=await service.updateSeries(writer,seriesId,{status:'RETIRED'});
   assert.equal(archived.status,'RETIRED');
   await assert.rejects(()=>service.updateSeries(writer,'999',{nameZh:'不存在'}),ProductNotFoundError);
+});
+
+test('an audit failure aborts the series write instead of leaving an unlogged change',async()=>{
+  const {repository}=setup();
+  const failingAudit:ProductAuditPort={record:async()=>{throw new Error('audit unavailable');}};
+  const service=new ProductService(repository,failingAudit);
+  await assert.rejects(()=>service.createSeries(writer,{code:'FC',nameZh:'折叠系列',nameEn:'Folding Series',defaultPlatformId:platformId}),
+    /audit unavailable/);
 });
 
 test('series repository SQL keeps the archive guard and never rewrites the immutable code',async()=>{

@@ -145,8 +145,8 @@ export interface ProductRepository {
   platformHasUnretiredModels(id: string): Promise<boolean>;
   platformIsActive(id: string): Promise<boolean>;
   listSeries(): Promise<ProductSeriesRow[]>;
-  createSeries(input: CreateSeriesRecord): Promise<ProductSeriesRow>;
-  updateSeries(input: UpdateSeriesRecord): Promise<ProductSeriesRow | null>;
+  createSeries(input: CreateSeriesRecord, executor?: QueryExecutor): Promise<ProductSeriesRow>;
+  updateSeries(input: UpdateSeriesRecord, executor?: QueryExecutor): Promise<ProductSeriesRow | null>;
   seriesExists(id: string): Promise<boolean>;
   seriesHasUnretiredModels(id: string): Promise<boolean>;
   createModel(input: CreateModelRecord): Promise<any>;

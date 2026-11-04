@@ -213,10 +213,13 @@ export class ProductService {
     if (!await this.repository.platformIsActive(defaultPlatformId))
       throw new ProductValidationError('Default engineering platform must exist and be ACTIVE');
     try {
-      const row = await this.repository.createSeries({ code, nameZh, nameEn, status, defaultPlatformId, actorUserId: actor.userId });
-      await this.audit.record({ actorUserId: actor.userId, action: 'product.series_created',
-        targetType: 'product.series', targetId: row.id, metadata: { code, status, defaultPlatformId } });
-      return row;
+      return await this.repository.transaction(async executor => {
+        const row = await this.repository.createSeries(
+          { code, nameZh, nameEn, status, defaultPlatformId, actorUserId: actor.userId }, executor);
+        await this.audit.record({ actorUserId: actor.userId, action: 'product.series_created',
+          targetType: 'product.series', targetId: row.id, metadata: { code, status, defaultPlatformId } }, executor);
+        return row;
+      });
     } catch (error) {
       mapCreateError(error, 'Series code already exists', 'Default engineering platform not found');
     }
@@ -240,21 +243,24 @@ export class ProductService {
     }
     if (input.status === 'RETIRED' && await this.repository.seriesHasUnretiredModels(seriesId))
       throw new ProductValidationError('Retire or reassign linked bike models before archiving this series');
-    const row = await this.repository.updateSeries({
-      id: seriesId,
-      nameZh: input.nameZh === undefined ? null : requireSeriesName(input.nameZh, 'Chinese'),
-      nameEn: input.nameEn === undefined ? null : requireSeriesName(input.nameEn, 'English'),
-      status: input.status ?? null,
-      defaultPlatformId,
-      actorUserId: actor.userId,
+    const row = await this.repository.transaction(async executor => {
+      const updated = await this.repository.updateSeries({
+        id: seriesId,
+        nameZh: input.nameZh === undefined ? null : requireSeriesName(input.nameZh, 'Chinese'),
+        nameEn: input.nameEn === undefined ? null : requireSeriesName(input.nameEn, 'English'),
+        status: input.status ?? null,
+        defaultPlatformId,
+        actorUserId: actor.userId,
+      }, executor);
+      if (updated) await this.audit.record({ actorUserId: actor.userId, action: 'product.series_updated',
+        targetType: 'product.series', targetId: updated.id,
+        metadata: { status: updated.status, defaultPlatformId: updated.default_platform_id } }, executor);
+      return updated;
     });
     if (!row) {
       if (!await this.repository.seriesExists(seriesId)) throw new ProductNotFoundError('Series not found');
       throw new ProductConflictError('Series changed while it was being saved; reload before saving');
     }
-    await this.audit.record({ actorUserId: actor.userId, action: 'product.series_updated',
-      targetType: 'product.series', targetId: row.id,
-      metadata: { status: row.status, defaultPlatformId: row.default_platform_id } });
     return row;
   }
 

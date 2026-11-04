@@ -137,8 +137,8 @@ export class PostgresProductRepository implements ProductRepository {
     return result.rows;
   }
 
-  async createSeries(input: CreateSeriesRecord): Promise<ProductSeriesRow> {
-    const result = await this.database.query<ProductSeriesRow>(
+  async createSeries(input: CreateSeriesRecord, executor?: QueryExecutor): Promise<ProductSeriesRow> {
+    const result = await (executor ?? this.database).query<ProductSeriesRow>(
       `INSERT INTO product.series(code,name_zh,name_en,status,default_platform_id)
        VALUES ($1,$2,$3,$4,$5::uuid)
        RETURNING series_id AS id,code,name_zh,name_en,status,default_platform_id`,
@@ -151,8 +151,8 @@ export class PostgresProductRepository implements ProductRepository {
    * Only ACTIVE/DRAFT series may reference an active platform (enforced in the service);
    * the SQL guard keeps a RETIRED series from hiding bike models that still point at it.
    */
-  async updateSeries(input: UpdateSeriesRecord): Promise<ProductSeriesRow | null> {
-    const result = await this.database.query<ProductSeriesRow>(
+  async updateSeries(input: UpdateSeriesRecord, executor?: QueryExecutor): Promise<ProductSeriesRow | null> {
+    const result = await (executor ?? this.database).query<ProductSeriesRow>(
       `UPDATE product.series s SET name_zh=COALESCE($2,name_zh),name_en=COALESCE($3,name_en),
          status=COALESCE($4,status),default_platform_id=COALESCE($5::uuid,default_platform_id)
        WHERE s.series_id=$1::bigint
