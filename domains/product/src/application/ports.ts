@@ -1,4 +1,4 @@
-import type { HomepageBinding, HomepageBindingMode, HomepageSlotCode, ModelFieldDefinition, CustomFieldType, CustomFieldValue, PlatformRow, ProductCatalog, ProductEntityKind, ProductStatus, ProductTypeCode , RecycledModel} from '../core/model.js';
+import type { HomepageBinding, HomepageBindingMode, HomepageSlotCode, ModelFieldDefinition, CustomFieldType, CustomFieldValue, PlatformRow, ProductCatalog, ProductEntityKind, ProductSeriesRow, ProductStatus, ProductTypeCode , RecycledModel} from '../core/model.js';
 import type { CatalogPublishAssetRow,PublicationRow,PublicationStatus,PublicationDraft } from '../core/publication.js';
 import type { QueryExecutor } from '@alsvid/database';
 
@@ -31,6 +31,29 @@ export interface UpdatePlatformRecord {
   status: ProductStatus | null;
   descriptionProvided: boolean;
   description: string;
+  actorUserId: string;
+}
+
+/**
+ * A commercial series carries the bike grouping a salesperson picks when registering a
+ * model; the default platform keeps the existing engineering compatibility checks valid.
+ * Series rows have no version column, so concurrent edits are last-write-wins by design.
+ */
+export interface CreateSeriesRecord {
+  code: string;
+  nameZh: string;
+  nameEn: string;
+  status: ProductStatus;
+  defaultPlatformId: string;
+  actorUserId: string;
+}
+
+export interface UpdateSeriesRecord {
+  id: string;
+  nameZh: string | null;
+  nameEn: string | null;
+  status: ProductStatus | null;
+  defaultPlatformId: string | null;
   actorUserId: string;
 }
 
@@ -120,6 +143,12 @@ export interface ProductRepository {
   updatePlatform(input: UpdatePlatformRecord): Promise<PlatformRow | null>;
   platformExists(id: string): Promise<boolean>;
   platformHasUnretiredModels(id: string): Promise<boolean>;
+  platformIsActive(id: string): Promise<boolean>;
+  listSeries(): Promise<ProductSeriesRow[]>;
+  createSeries(input: CreateSeriesRecord): Promise<ProductSeriesRow>;
+  updateSeries(input: UpdateSeriesRecord): Promise<ProductSeriesRow | null>;
+  seriesExists(id: string): Promise<boolean>;
+  seriesHasUnretiredModels(id: string): Promise<boolean>;
   createModel(input: CreateModelRecord): Promise<any>;
   createVariant(input: CreateVariantRecord): Promise<any>;
   createSku(input: CreateSkuRecord): Promise<any>;

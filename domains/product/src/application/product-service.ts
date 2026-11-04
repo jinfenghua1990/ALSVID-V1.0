@@ -1,7 +1,7 @@
 import { ForbiddenError } from '@alsvid/kernel';
 import { postgresErrorCode } from '@alsvid/database';
 import { ProductConflictError, ProductNotFoundError, ProductValidationError } from '../core/errors.js';
-import { ProductCapability, type HomepageBinding, type HomepageBindingMode, type HomepageSlotCode, type ModelFieldDefinition, type CustomFieldType, type CustomFieldValue, type ProductCatalog, type RecycledModel, type ProductEntityKind, type ProductStatus, type ProductTypeCode } from '../core/model.js';
+import { ProductCapability, type HomepageBinding, type HomepageBindingMode, type HomepageSlotCode, type ModelFieldDefinition, type CustomFieldType, type CustomFieldValue, type ProductCatalog, type ProductSeriesRow, type RecycledModel, type ProductEntityKind, type ProductStatus, type ProductTypeCode } from '../core/model.js';
 import { normalizeProductCode, normalizeProductCountry, normalizeSkuDimension, normalizeMnemonicSku, normalizeMnemonicPrefix, deriveVehicleSkuPrefix } from '../core/normalization.js';
 import {approvedCatalogAssets,mergeCatalogAssets,assertPublicationTransition,curatedCatalogImage,toPublicCatalogItem,validatePublicationDraft,type PublicationAction,type PublicationDraft} from '../core/publication.js';
 import type { ProductActor, ProductAuditPort, ProductRepository } from './ports.js';
@@ -185,6 +185,76 @@ export class ProductService {
     await this.audit.record({ actorUserId: actor.userId, action: 'product.platform_updated',
       targetType: 'product.platform', targetId: row.id,
       metadata: { status: row.status, version: row.version } });
+    return row;
+  }
+
+  /**
+   * Commercial series are the grouping a salesperson must pick before a bike model can be
+   * registered. They stay separate from engineering platforms, but each series must point at an
+   * ACTIVE platform so the existing createModel compatibility check keeps resolving a platform.
+   */
+  async listSeries(actor: ProductActor): Promise<ProductSeriesRow[]> {
+    requireCapability(actor, ProductCapability.Read);
+    return this.repository.listSeries();
+  }
+
+  async createSeries(actor: ProductActor, input: {
+    code: string; nameZh: string; nameEn: string; status?: ProductStatus; defaultPlatformId: string;
+  }): Promise<ProductSeriesRow> {
+    requireCapability(actor, ProductCapability.Write);
+    if (!input || typeof input.code !== 'string') throw new ProductValidationError('Series code is required');
+    const code = normalizeProductCode(input.code);
+    const nameZh = requireSeriesName(input.nameZh, 'Chinese');
+    const nameEn = requireSeriesName(input.nameEn, 'English');
+    const status = input.status ?? 'ACTIVE';
+    if (!['DRAFT', 'ACTIVE'].includes(status))
+      throw new ProductValidationError('A new series can only be DRAFT or ACTIVE');
+    const defaultPlatformId = requirePlatformReference(input.defaultPlatformId);
+    if (!await this.repository.platformIsActive(defaultPlatformId))
+      throw new ProductValidationError('Default engineering platform must exist and be ACTIVE');
+    try {
+      const row = await this.repository.createSeries({ code, nameZh, nameEn, status, defaultPlatformId, actorUserId: actor.userId });
+      await this.audit.record({ actorUserId: actor.userId, action: 'product.series_created',
+        targetType: 'product.series', targetId: row.id, metadata: { code, status, defaultPlatformId } });
+      return row;
+    } catch (error) {
+      mapCreateError(error, 'Series code already exists', 'Default engineering platform not found');
+    }
+  }
+
+  async updateSeries(actor: ProductActor, id: string, input: {
+    nameZh?: string; nameEn?: string; status?: ProductStatus; defaultPlatformId?: string;
+  }): Promise<ProductSeriesRow> {
+    requireCapability(actor, ProductCapability.Write);
+    const seriesId = requireSeriesId(id);
+    if (!input || (input.nameZh === undefined && input.nameEn === undefined
+      && input.status === undefined && input.defaultPlatformId === undefined))
+      throw new ProductValidationError('No series changes supplied');
+    if (input.status !== undefined && !['DRAFT', 'ACTIVE', 'RETIRED'].includes(input.status))
+      throw new ProductValidationError('Unsupported series status');
+    let defaultPlatformId: string | null = null;
+    if (input.defaultPlatformId !== undefined) {
+      defaultPlatformId = requirePlatformReference(input.defaultPlatformId);
+      if (!await this.repository.platformIsActive(defaultPlatformId))
+        throw new ProductValidationError('Default engineering platform must exist and be ACTIVE');
+    }
+    if (input.status === 'RETIRED' && await this.repository.seriesHasUnretiredModels(seriesId))
+      throw new ProductValidationError('Retire or reassign linked bike models before archiving this series');
+    const row = await this.repository.updateSeries({
+      id: seriesId,
+      nameZh: input.nameZh === undefined ? null : requireSeriesName(input.nameZh, 'Chinese'),
+      nameEn: input.nameEn === undefined ? null : requireSeriesName(input.nameEn, 'English'),
+      status: input.status ?? null,
+      defaultPlatformId,
+      actorUserId: actor.userId,
+    });
+    if (!row) {
+      if (!await this.repository.seriesExists(seriesId)) throw new ProductNotFoundError('Series not found');
+      throw new ProductConflictError('Series changed while it was being saved; reload before saving');
+    }
+    await this.audit.record({ actorUserId: actor.userId, action: 'product.series_updated',
+      targetType: 'product.series', targetId: row.id,
+      metadata: { status: row.status, defaultPlatformId: row.default_platform_id } });
     return row;
   }
 
@@ -511,6 +581,25 @@ function validateModelFields(definitions:ModelFieldDefinition[],productTypeCode:
 function requirePlatformName(value: unknown): string {
   if (typeof value !== 'string' || !value.trim() || value.trim().length > 160)
     throw new ProductValidationError('Platform name must be 1–160 characters');
+  return value.trim();
+}
+
+function requireSeriesName(value: unknown, language: string): string {
+  if (typeof value !== 'string' || !value.trim() || value.trim().length > 120)
+    throw new ProductValidationError(`Series ${language} name must be 1–120 characters`);
+  return value.trim();
+}
+
+/** Series rows are bigint identities; a compact digit check keeps SQL casts predictable. */
+function requireSeriesId(value: unknown): string {
+  if (typeof value !== 'string' || !/^[0-9]{1,18}$/.test(value.trim()))
+    throw new ProductValidationError('Invalid series ID');
+  return value.trim();
+}
+
+function requirePlatformReference(value: unknown): string {
+  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(value.trim()))
+    throw new ProductValidationError('A valid default engineering platform is required');
   return value.trim();
 }
 

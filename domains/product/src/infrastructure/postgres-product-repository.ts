@@ -1,7 +1,7 @@
 import type { DatabasePort, QueryExecutor } from '@alsvid/database';
-import type { HomepageBinding, ModelFieldDefinition, PlatformRow, ProductCatalog, ProductEntityKind, RecycledModel } from '../core/model.js';
+import type { HomepageBinding, ModelFieldDefinition, PlatformRow, ProductCatalog, ProductEntityKind, ProductSeriesRow, RecycledModel } from '../core/model.js';
 import type { CatalogPublishAssetRow,PublicationRow, PublicationDraft, PublicationStatus } from '../core/publication.js';
-import type { CreateModelRecord, CreatePlatformRecord, CreateSkuRecord, CreateVariantRecord, ProductRepository, UpdatePlatformRecord, UpdateProductRecord } from '../application/ports.js';
+import type { CreateModelRecord, CreatePlatformRecord, CreateSeriesRecord, CreateSkuRecord, CreateVariantRecord, ProductRepository, UpdatePlatformRecord, UpdateProductRecord, UpdateSeriesRecord } from '../application/ports.js';
 
 export class PostgresProductRepository implements ProductRepository {
   constructor(private readonly database: DatabasePort) {}
@@ -121,6 +121,58 @@ export class PostgresProductRepository implements ProductRepository {
   async platformHasUnretiredModels(id: string): Promise<boolean> {
     const result = await this.database.query(
       "SELECT 1 FROM product.models WHERE platform_id=$1 AND status <> 'RETIRED' LIMIT 1", [id]);
+    return result.rows.length > 0;
+  }
+
+  async platformIsActive(id: string): Promise<boolean> {
+    const result = await this.database.query(
+      "SELECT 1 FROM product.platforms WHERE id=$1::uuid AND status='ACTIVE'", [id]);
+    return result.rows.length > 0;
+  }
+
+  async listSeries(): Promise<ProductSeriesRow[]> {
+    const result = await this.database.query<ProductSeriesRow>(
+      `SELECT series_id AS id,code,name_zh,name_en,status,default_platform_id
+       FROM product.series ORDER BY code`);
+    return result.rows;
+  }
+
+  async createSeries(input: CreateSeriesRecord): Promise<ProductSeriesRow> {
+    const result = await this.database.query<ProductSeriesRow>(
+      `INSERT INTO product.series(code,name_zh,name_en,status,default_platform_id)
+       VALUES ($1,$2,$3,$4,$5::uuid)
+       RETURNING series_id AS id,code,name_zh,name_en,status,default_platform_id`,
+      [input.code,input.nameZh,input.nameEn,input.status,input.defaultPlatformId],
+    );
+    return result.rows[0]!;
+  }
+
+  /**
+   * Only ACTIVE/DRAFT series may reference an active platform (enforced in the service);
+   * the SQL guard keeps a RETIRED series from hiding bike models that still point at it.
+   */
+  async updateSeries(input: UpdateSeriesRecord): Promise<ProductSeriesRow | null> {
+    const result = await this.database.query<ProductSeriesRow>(
+      `UPDATE product.series s SET name_zh=COALESCE($2,name_zh),name_en=COALESCE($3,name_en),
+         status=COALESCE($4,status),default_platform_id=COALESCE($5::uuid,default_platform_id)
+       WHERE s.series_id=$1::bigint
+         AND ($4::text IS DISTINCT FROM 'RETIRED'
+              OR NOT EXISTS (SELECT 1 FROM product.models m
+                  WHERE m.series_id=s.series_id AND m.status <> 'RETIRED'))
+       RETURNING series_id AS id,code,name_zh,name_en,status,default_platform_id`,
+      [input.id,input.nameZh,input.nameEn,input.status,input.defaultPlatformId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async seriesExists(id: string): Promise<boolean> {
+    const result = await this.database.query('SELECT 1 FROM product.series WHERE series_id=$1::bigint', [id]);
+    return result.rows.length > 0;
+  }
+
+  async seriesHasUnretiredModels(id: string): Promise<boolean> {
+    const result = await this.database.query(
+      "SELECT 1 FROM product.models WHERE series_id=$1::bigint AND status <> 'RETIRED' LIMIT 1", [id]);
     return result.rows.length > 0;
   }
 

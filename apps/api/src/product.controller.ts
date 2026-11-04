@@ -7,6 +7,8 @@ import { productService } from './runtime.js';
 
 interface CreatePlatformBody { code: string; name: string; description?: string }
 interface UpdatePlatformBody { expectedVersion: number; name?: string; description?: string; status?: ProductStatus }
+interface CreateSeriesBody { code: string; nameZh: string; nameEn: string; status?: ProductStatus; defaultPlatformId: string }
+interface UpdateSeriesBody { nameZh?: string; nameEn?: string; status?: ProductStatus; defaultPlatformId?: string }
 interface CreateModelFieldBody {
   productTypeCode: ProductTypeCode; code:string; label:string;
   fieldType:'TEXT'|'NUMBER'|'BOOLEAN'|'SELECT'; options?:string[]; required?:boolean;
@@ -122,6 +124,23 @@ export class ProductController {
   @Patch('platforms/:id')
   async updatePlatform(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() input: UpdatePlatformBody) {
     return { data: await productService.updatePlatform(requireAuth(request), id, input) };
+  }
+
+  /** Commercial series feed the bike registration form; engineering platforms stay separate. */
+  @Get('series')
+  async listSeries(@Req() request: AuthenticatedRequest) {
+    return { data: await productService.listSeries(requireAuth(request)) };
+  }
+
+  @Post('series')
+  async createSeries(@Req() request: AuthenticatedRequest, @Body() input: CreateSeriesBody) {
+    return { data: await productService.createSeries(requireAuth(request), input) };
+  }
+
+  /** Must stay above the generic :entity/:id route, otherwise "series" is read as a product entity. */
+  @Patch('series/:id')
+  async updateSeries(@Req() request: AuthenticatedRequest, @Param('id') id: string, @Body() input: UpdateSeriesBody) {
+    return { data: await productService.updateSeries(requireAuth(request), id, input) };
   }
 
   @Post('models')
