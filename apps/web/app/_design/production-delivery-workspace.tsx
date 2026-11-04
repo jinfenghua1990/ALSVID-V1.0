@@ -30,7 +30,7 @@ type Facts = {
   inventory: {balances:Stock[]};
   warehouse: {warehouses:Warehouse[];locations:Location[]};
   partners: Partner[];
-  engineering: {buildSpecs:BuildSpec[]};
+  engineering: {buildSpecs:BuildSpec[]; parts:{id:string;part_number:string;name:string}[]};
   catalog: {skus:Sku[]};
 };
 const initial: Facts = {
@@ -38,7 +38,7 @@ const initial: Facts = {
   production:{orders:[],units:[],factoryReceipts:[]},logistics:{shipments:[],cargo:[],handoffs:[]},
   finance:{landedBatches:[],landedComponents:[],landedAllocations:[]},inventory:{balances:[]},
   warehouse:{warehouses:[],locations:[]},partners:[],
-  engineering:{buildSpecs:[]},catalog:{skus:[]},
+  engineering:{buildSpecs:[],parts:[]},catalog:{skus:[]},
 };
 const sources = {
   procurement:'/v1/procurement',production:'/v1/production',logistics:'/v1/logistics',
@@ -83,6 +83,8 @@ export function ProductionDeliveryWorkspace(){
   const [activeId,setActiveId]=useAdminWorkspaceState('production-delivery:active','');
   const [stepById,setStepById]=useAdminWorkspaceState<Record<string,Step>>('production-delivery:steps',{});
   const [showCreate,setShowCreate]=useState(false);
+  const [poRows,setPoRows]=useState<{id:number;type:'SKU'|'PART'}[]>([{id:0,type:'SKU'}]);
+  const nextPoRow=useRef(1);
   const [query,setQuery]=useState('');
   const [focusedShipmentId,setFocusedShipmentId]=useState('');
   const [unitLimit,setUnitLimit]=useState(20);
@@ -152,15 +154,16 @@ export function ProductionDeliveryWorkspace(){
   function submitPo(e:FormEvent<HTMLFormElement>){
     e.preventDefault();const form=new FormData(e.currentTarget);
     const supplierPartnerId=String(form.get('factory')??'');
-    const itemId=String(form.get('sku')??'');
-    const quantity=Number(form.get('quantity'));
-    const unitPrice=Number(form.get('price'));
-    if(!supplierPartnerId||!itemId||!Number.isInteger(quantity)||quantity<=0||!Number.isFinite(unitPrice)||unitPrice<0){setMessage('请选择工厂和 SKU，填写正确的数量及单价');return;}
+    const lines=poRows.map(({id,type})=>({
+      itemType:type, itemId:String(form.get(`item-${id}`)??''),
+      quantity:String(form.get(`quantity-${id}`)??''), unitPrice:String(form.get(`price-${id}`)??''),
+      unit:String(form.get(`unit-${id}`)||'EA'), requestedDate:String(form.get(`date-${id}`)||'')||undefined,
+    }));
+    if(!supplierPartnerId||lines.some(line=>!line.itemId||!Number.isFinite(Number(line.quantity))||Number(line.quantity)<=0||line.unitPrice===''||!Number.isFinite(Number(line.unitPrice))||Number(line.unitPrice)<0)){setMessage('请选择工厂和物料，并填写有效数量及单价');return;}
     void run(async()=>{
       const row=await api<Po>('/v1/procurement/purchase-orders',{method:'POST',body:JSON.stringify({
-        supplierPartnerId,currency:form.get('currency'),lines:[{
-          itemType:'SKU',itemId,quantity,unitPrice,unit:'EA',requestedDate:form.get('deliveryDate')||undefined,
-        }],
+        supplierPartnerId,currency:form.get('currency'),incoterm:form.get('incoterm')||undefined,
+        paymentTerms:form.get('paymentTerms')||undefined,depositTerms:form.get('depositTerms')||undefined,lines,
       })});
       if(!row?.id)throw new Error('采购单创建结果不完整，请查询现有单据，避免重复创建');
       open(row.id);
@@ -239,12 +242,22 @@ export function ProductionDeliveryWorkspace(){
       <h2>新建生产采购单</h2>
       <div className={styles.fields}>
         <label>工厂 <a href="/admin/supply/partners" style={{marginLeft:8,fontSize:12}}>+ 新建工厂</a><select name="factory" required defaultValue=""><option value="">{factoryPartners.length ? "选择工厂" : "暂无工厂，请先新建"}</option>{factoryPartners.map(p=><option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
-        <label>商品 SKU<select name="sku" required defaultValue=""><option value="">选择已建商品</option>{purchaseSkus.map(s=><option key={s.id} value={s.id}>{s.sku} · {s.name}</option>)}</select></label>
-        <label>采购数量<input name="quantity" type="number" min="1" step="1" required/></label>
-        <label>单台采购价<input name="price" type="number" min="0" step="0.01" required/></label>
         <label>币种<select name="currency" defaultValue="CNY"><option>CNY</option><option>EUR</option><option>USD</option></select></label>
-        <label>预计交期<input name="deliveryDate" type="date" defaultValue={yyyyMmDd(90)} required/></label>
-      </div><div className={styles.actions}><button type="button" onClick={()=>setShowCreate(false)}>取消</button><button disabled={busy} className={styles.primary}>创建采购单草稿</button></div>
+        <label>贸易条款<input name="incoterm" placeholder="例如 FOB"/></label>
+        <label>付款条件<input name="paymentTerms" placeholder="付款约定"/></label>
+        <label>定金条件<input name="depositTerms" placeholder="定金约定"/></label>
+      </div>
+      {poRows.map((row,index)=><div className={styles.fields} key={row.id}>
+        <label>物料类型<select value={row.type} onChange={e=>setPoRows(rows=>rows.map(item=>item.id===row.id?{...item,type:e.target.value as 'SKU'|'PART'}:item))}><option value="SKU">整车 SKU</option><option value="PART">零件</option></select></label>
+        <label>物料 {index+1}<select key={row.type} name={`item-${row.id}`} required defaultValue=""><option value="">选择物料</option>{row.type==='SKU'?purchaseSkus.map(item=><option key={item.id} value={item.id}>{item.sku} · {item.name}</option>):(facts.engineering.parts??[]).map(item=><option key={item.id} value={item.id}>{item.part_number} · {item.name}</option>)}</select></label>
+        <label>数量<input name={`quantity-${row.id}`} type="number" min="0.000001" step="any" required/></label>
+        <label>单位<input name={`unit-${row.id}`} defaultValue="EA"/></label>
+        <label>单价<input name={`price-${row.id}`} type="number" min="0" step="any" required/></label>
+        <label>要求交期<input name={`date-${row.id}`} type="date"/></label>
+        {poRows.length>1?<button type="button" onClick={()=>setPoRows(rows=>rows.filter(item=>item.id!==row.id))}>移除此行</button>:null}
+      </div>)}
+      <div className={styles.actions}><button type="button" onClick={()=>setPoRows(rows=>[...rows,{id:nextPoRow.current++,type:'SKU'}])}>＋ 添加物料</button></div>
+      <div><p className={styles.hint}>采购草稿保存后，可在总单中继续记录生产、发运和入库。</p>      </div><div className={styles.actions}><button type="button" onClick={()=>setShowCreate(false)}>取消</button><button disabled={busy} className={styles.primary}>创建采购单草稿</button></div>
     </form>:null}
     {openIds.length>0?<nav className={styles.orderTabs} aria-label="已打开的生产采购单">
       <button type="button" onClick={()=>setActiveId('')} aria-current={!activeId?'page':undefined}>全部订单</button>
@@ -254,7 +267,7 @@ export function ProductionDeliveryWorkspace(){
       </span>;})}
     </nav>:null}
     {!activeId?<section className={styles.panel}>
-      <div className={styles.panelHead}><h2>生产采购订单</h2><input aria-label="搜索订单" value={query} onChange={e=>setQuery(e.target.value)} placeholder="搜索订单号、车型或工厂"/></div>
+      <div className={styles.panelHead}><input aria-label="搜索订单" value={query} onChange={e=>setQuery(e.target.value)} placeholder="搜索订单号、车型或工厂"/></div>
       <div className={styles.scroll}><table><thead><tr><th>单号</th><th>工厂</th><th>车型 / SKU</th><th>采购数量</th><th>采购金额</th><th>生产交付状态</th><th>操作</th></tr></thead>
         <tbody>{purchaseOrders.map(po=>{const lines=facts.procurement.purchaseOrderLines.filter(l=>l.purchase_order_id===po.id);return <tr key={po.id}>
           <td><strong>{po.po_number}</strong></td><td>{po.supplier_name}</td><td>{lines.map(l=>l.sku??'零件').join('、')||'—'}</td>

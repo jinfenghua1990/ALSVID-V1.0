@@ -78,7 +78,6 @@ export const ADMIN_SECONDARY_NAVIGATION: Readonly<Record<string, readonly AdminS
   '供应链': [
     group('生产交付', [
       ['生产交付总单', '/admin/supply'],
-      ['原采购工作台', '/admin/supply/legacy'],
       ['生产 / VIN 质检明细', '/admin/production'],
       ['出口物流 / 清关明细', '/admin/logistics'],
     ]),
