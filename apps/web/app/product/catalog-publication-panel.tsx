@@ -113,12 +113,14 @@ function PublicationEditor({item,disabled,save,transition}:{
   const editable=item.status==='DRAFT'||item.status==='WITHDRAWN';
   const changed=zh!==item.title_zh||de!==item.title_de||en!==item.title_en||evidence!==item.evidence_note;
   const ready=Boolean(item.title_zh&&item.title_de&&item.title_en&&item.evidence_note&&item.image_path);
+  const missing=[!item.title_zh&&'中文标题',!item.title_de&&'德语标题',!item.title_en&&'英文标题',!item.evidence_note&&'产品与实物图核对记录',!item.image_path&&'车型主图（在产品研发里上传并核对真实素材）'].filter((label):label is string=>Boolean(label));
   function submit(e:FormEvent<HTMLFormElement>){
     e.preventDefault();void save({expectedVersion:item.version,titleZh:zh,titleDe:de,titleEn:en,evidenceNote:evidence});
   }
   return <div className={styles.editor}>
     <span className={styles.status}>{statuses[item.status]}</span>
     <small>图片：{item.image_path||'草稿尚未核对图片'}</small>
+    {editable&&missing.length>0?<p className={styles.note}>提交审核前还缺：{missing.join('、')}。</p>:null}
     <form onSubmit={submit}>
       <label>中文标题<input value={zh} onChange={e=>setZh(e.target.value)} minLength={2} maxLength={120} required disabled={!editable||disabled}/></label>
       <label>德语标题<input value={de} onChange={e=>setDe(e.target.value)} minLength={2} maxLength={120} required disabled={!editable||disabled}/></label>
@@ -127,7 +129,7 @@ function PublicationEditor({item,disabled,save,transition}:{
       {editable?<button type="submit" disabled={disabled||!changed}>保存草稿</button>:null}
     </form>
     <div className={styles.actions}>
-      {editable?<button type="button" disabled={disabled||!ready||changed} onClick={()=>void transition('SUBMIT')}>提交审核</button>:null}
+      {editable?<button type="button" disabled={disabled||!ready||changed} title={!ready?'先补齐：'+missing.join('、'):changed?'有未保存的修改，先保存草稿再提交':undefined} onClick={()=>void transition('SUBMIT')}>提交审核</button>:null}
       {item.status==='IN_REVIEW'?<button type="button" disabled={disabled} onClick={()=>{
         if(window.confirm('确认已核验真实车型、素材和中德英标题，将此商品公开发布？'))void transition('PUBLISH');
       }}>审核并发布</button>:null}
