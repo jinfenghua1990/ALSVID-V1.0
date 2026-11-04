@@ -24,7 +24,8 @@ export const ADMIN_SECONDARY_NAVIGATION: Readonly<Record<string, readonly AdminS
       { label: '整车产品（车辆明细）', href: '/admin/product?type=BIKE#vehicle-details' },
       { label: '车辆型号', href: '/admin/product?type=BIKE#vehicle-models', nested: true },
       { label: '零配件', href: '/admin/product?type=PARTS#parts' },
-      { label: '技术平台', href: '/admin/product#series' },
+      { label: '产品系列', href: '/admin/product#series' },
+      { label: '技术平台', href: '/admin/product#product-types' },
     ] },
   ],
   '电商': [

@@ -180,6 +180,10 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
   const [platformDraft, setPlatformDraft] = useState<Platform | 'new' | null>(null);
   const [platformStatusFilter, setPlatformStatusFilter] = useState('ALL');
   const [savingPlatform, setSavingPlatform] = useState(false);
+  const [seriesDraft, setSeriesDraft] = useState<Series | 'new' | null>(null);
+  const [seriesStatusFilter, setSeriesStatusFilter] = useState('ALL');
+  const [seriesSearch, setSeriesSearch] = useState('');
+  const [savingSeries, setSavingSeries] = useState(false);
   const [workspace, setWorkspace] = useState<'bikes' | 'models' | 'parts' | 'platforms'>('bikes');
   const [partTab, setPartTab] = useState<'manufacturing' | 'retail'>('manufacturing');
   const [createKind, setCreateKind] = useState<'bike' | 'part' | 'accessory' | null>(null);
@@ -342,6 +346,11 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
     (platformStatusFilter === 'ALL' || platform.status === platformStatusFilter)
     && [platform.code, platform.name, platform.description].some(value => (value || '').toLocaleLowerCase().includes(modelSearch.toLocaleLowerCase()))
   ), [catalog.platforms, modelSearch, platformStatusFilter]);
+  const activePlatforms = useMemo(() => catalog.platforms.filter(platform => platform.status === 'ACTIVE'), [catalog.platforms]);
+  const filteredSeries = useMemo(() => (catalog.series ?? []).filter(series =>
+    (seriesStatusFilter === 'ALL' || series.status === seriesStatusFilter)
+    && [series.code, series.name_zh, series.name_en].some(value => (value || '').toLocaleLowerCase().includes(seriesSearch.toLocaleLowerCase()))
+  ), [catalog.series, seriesSearch, seriesStatusFilter]);
 
   const normalizedNewBikeCode = newBikeCode.trim().toUpperCase();
   const suggestedBikeSkuPrefix = deriveVehicleSkuPrefix(normalizedNewBikeCode);
@@ -404,6 +413,43 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
         + (error instanceof Error ? error.message : '请求异常'));
     } finally {
       setSavingPlatform(false);
+    }
+  }
+
+  async function saveSeries(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!seriesDraft || savingSeries) return;
+    const form = new FormData(event.currentTarget);
+    const creating = seriesDraft === 'new';
+    const body = creating
+      ? { code: String(form.get('code') ?? ''), nameZh: form.get('nameZh'), nameEn: form.get('nameEn'),
+          defaultPlatformId: form.get('defaultPlatformId') }
+      : { nameZh: form.get('nameZh'), nameEn: form.get('nameEn'), status: form.get('status'),
+          defaultPlatformId: form.get('defaultPlatformId') };
+    let written = false;
+    setSavingSeries(true);
+    try {
+      const saved = await api(creating ? '/v1/product/series' : `/v1/product/series/${seriesDraft.id}`, {
+        method: creating ? 'POST' : 'PATCH', body: JSON.stringify(body),
+      }) as Series;
+      written = true;
+      // Same rule as platforms: never call a create twice, verify by reading the catalogue back.
+      const verified = await api('/v1/product/catalog') as Catalog;
+      const returned = (verified.series ?? []).find(series => series.id === saved.id);
+      if (!returned || returned.code !== saved.code || returned.name_zh !== saved.name_zh
+          || returned.name_en !== saved.name_en || returned.status !== saved.status
+          || returned.default_platform_id !== saved.default_platform_id) {
+        throw new Error('接口已返回写入成功，但数据回读与保存结果不一致；请核对后再操作。');
+      }
+      setCatalog({ ...emptyCatalog, ...verified });
+      setSeriesDraft(null);
+      setMessage('产品系列已保存，并从数据库重新读取核对。');
+    } catch (error) {
+      if (written) setSeriesDraft(null);
+      setMessage((written ? '写入接口已返回成功，但尚未完成回读核验：' : '产品系列保存失败：')
+        + (error instanceof Error ? error.message : '请求异常'));
+    } finally {
+      setSavingSeries(false);
     }
   }
 
@@ -486,11 +532,12 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
       <main className={styles.archiveWorkspace}>
         <header className={styles.archiveHeading}>
           <div className={styles.archiveHeadingCopy}>
-            <h1>{workspace === 'bikes' ? '整车产品' : workspace === 'models' ? '车辆型号' : workspace === 'parts' ? '零配件' : '技术平台'}</h1>
+            <h1>{workspace === 'bikes' ? '整车产品' : workspace === 'models' ? '车辆型号' : workspace === 'parts' ? '零配件' : '产品系列 / 技术平台'}</h1>
           </div>
           <div className={styles.archiveHeadingActions}>
             <button type="button" className={styles.archiveSecondaryButton} onClick={() => void reload()} disabled={loading}>刷新</button>
             {workspace === 'bikes' || workspace === 'models' ? <button type="button" className={styles.archivePrimaryButton} onClick={() => {setNewModelType('BIKE');setNewBikeCode('');setCreateKind('bike');}}>＋ 新建整车</button> : null}
+            {workspace === 'platforms' ? <button type="button" className={styles.archivePrimaryButton} disabled={loading || !!catalogError} onClick={() => setSeriesDraft('new')}>＋ 新建产品系列</button> : null}
             {workspace === 'platforms' ? <button type="button" className={styles.archivePrimaryButton} disabled={loading || !!catalogError} onClick={() => setPlatformDraft('new')}>＋ 新建技术平台</button> : null}
             {workspace === 'parts' ? <button type="button" className={styles.archivePrimaryButton} onClick={() => { if (partTab === 'manufacturing') setCreateKind('part'); else {setNewModelType('ACCESSORY');setCreateKind('accessory');} }}>＋ {partTab === 'manufacturing' ? '新建零件' : '新建可售配件'}</button> : null}
           </div>
@@ -658,8 +705,32 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
         ) : null}
 
         {workspace === 'platforms' ? (
+          <section id="series" className={styles.archivePanel} aria-label="产品系列管理">
+            <div className={styles.archivePanelTitle}><div><h2>产品系列</h2><p>新建整车时必须选择已启用的产品系列；系列指向的技术平台决定整车的工程归类</p></div><span>{loading || catalogError ? '—' : (catalog.series ?? []).length} 条记录</span></div>
+            <div className={styles.archiveFilters}><label className={styles.archiveSearch}><span className={styles.srOnly}>搜索产品系列</span><input value={seriesSearch} onChange={event => setSeriesSearch(event.target.value)} placeholder="搜索系列名称或编码" aria-label="搜索产品系列" /></label>
+              <select aria-label="按产品系列状态筛选" value={seriesStatusFilter} onChange={event => setSeriesStatusFilter(event.target.value)}><option value="ALL">全部状态</option><option value="DRAFT">草稿</option><option value="ACTIVE">启用</option><option value="RETIRED">已归档</option></select>
+            </div>
+            {loading ? <div className={styles.archiveLoading}>正在读取产品系列…</div> :
+              catalogError ? <div className={styles.archiveEmpty}>产品系列暂时无法读取，请检查接口。</div> :
+              filteredSeries.length ? (
+                <div className={styles.platformTableWrap}><table className={styles.platformTable} aria-label="产品系列档案">
+                  <thead><tr><th>系列编码</th><th>中文名称</th><th>英文名称</th><th>默认技术平台</th><th>关联整车</th><th>状态</th><th>操作</th></tr></thead>
+                  <tbody>{[...filteredSeries].sort((a,b)=>a.code.localeCompare(b.code)).map(series => <tr key={series.id}>
+                    <td><strong>{series.code}</strong></td><td>{series.name_zh}</td><td>{series.name_en}</td>
+                    <td>{catalog.platforms.find(platform => platform.id === series.default_platform_id)?.name ?? '未关联'}</td>
+                    <td>{catalog.models.filter((model) => model.series_id === series.id).length}</td>
+                    <td><span className={styles.archiveStatus} data-status={series.status}>{series.status === 'RETIRED' ? '已归档' : statusLabel(series.status)}</span></td>
+                    <td><button type="button" className={styles.archiveEdit} onClick={() => setSeriesDraft(series)}>编辑</button></td>
+                  </tr>)}</tbody>
+                </table></div>
+              ) : <div className={styles.archiveEmpty}><span className={styles.archiveEmptyIcon} aria-hidden="true">◇</span><strong>{seriesSearch || seriesStatusFilter !== 'ALL' ? '没有匹配的产品系列' : '目前没有产品系列记录'}</strong><p>{seriesSearch || seriesStatusFilter !== 'ALL' ? '可以调整搜索词或筛选条件。' : '没有启用的产品系列，新建整车时无法选择系列。'}</p>{!seriesSearch && seriesStatusFilter === 'ALL' ? <button className={styles.archivePrimaryButton} type="button" onClick={() => setSeriesDraft('new')}>＋ 新建产品系列</button> : null}</div>}
+            <p className={styles.archiveFootnote}>系列编码建档后固定不变。只有启用的系列能在新建整车时选择；有关联未退役整车的系列不可归档，历史记录不做物理删除。</p>
+          </section>
+        ) : null}
+
+        {workspace === 'platforms' ? (
           <section id="product-types" className={`${styles.archivePanel} ${styles.platformArchive}`} aria-label="技术平台管理">
-            <div className={styles.archivePanelTitle} id="series"><div><p>技术平台用于归类整车，不和销售 SKU 混用</p></div><span>{loading || catalogError ? '—' : catalog.platforms.length} 条记录</span></div>
+            <div className={styles.archivePanelTitle}><div><h2>技术平台档案</h2><p>技术平台用于归类整车，不和销售 SKU 混用</p></div><span>{loading || catalogError ? '—' : catalog.platforms.length} 条记录</span></div>
             <div className={styles.archiveFilters}><label className={styles.archiveSearch}><span className={styles.srOnly}>搜索技术平台</span><input value={modelSearch} onChange={event => setModelSearch(event.target.value)} placeholder="搜索平台名称、编码或说明" aria-label="搜索技术平台" /></label>
               <select aria-label="按技术平台状态筛选" value={platformStatusFilter} onChange={event => setPlatformStatusFilter(event.target.value)}><option value="ALL">全部状态</option><option value="DRAFT">草稿</option><option value="ACTIVE">启用</option><option value="RETIRED">已归档</option></select>
             </div>
@@ -716,7 +787,7 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
                     <small>选择已启用的产品系列，例如「折叠系列 · FC」。系列是产品分类，不是技术平台；技术平台由管理员在系列配置中关联，车架、电驱等参数后续维护。</small>
                   </label>
                 )}
-                {createKind === 'bike' && !(catalog.series??[]).some(s => s.status === 'ACTIVE') ? <p className={styles.archiveError}>目前没有已启用的产品系列，无法创建整车。</p> : null}
+                {createKind === 'bike' && !(catalog.series??[]).some(s => s.status === 'ACTIVE') ? <p className={styles.archiveError}>目前没有已启用的产品系列，无法创建整车。请先在「产品系列 / 技术平台」页新建并启用产品系列。</p> : null}
                 {createKind === 'accessory' && !selectableProductTypes.some(type => type.code !== 'BIKE') ? <p className={styles.archiveError}>当前商品类型接口尚未提供可售配件类型，无法创建。</p> : null}
                 {createKind === 'bike' ? <div className={styles.createSteps}>
                   <strong>员工建档顺序</strong>
@@ -798,6 +869,43 @@ export default function ProductClient({ embedded = false, view = 'archive' }: { 
             <div className={styles.createActions}>
               <button type="button" className={styles.archiveSecondaryButton} disabled={savingPlatform} onClick={() => setPlatformDraft(null)}>取消</button>
               <button type="submit" className={styles.archivePrimaryButton} disabled={savingPlatform}>{savingPlatform ? '正在保存…' : '保存平台'}</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
+      {view === "archive" && seriesDraft ? (
+        <div className={styles.modal} role="presentation" onMouseDown={() => { if (!savingSeries) setSeriesDraft(null); }}>
+          <form className={styles.createCard} role="dialog" aria-modal="true"
+            aria-label={seriesDraft === 'new' ? '新建产品系列' : '编辑产品系列'}
+            onSubmit={event => void saveSeries(event)}
+            onMouseDown={event => event.stopPropagation()}
+            onKeyDown={event => { if (event.key === 'Escape' && !savingSeries) setSeriesDraft(null); }}>
+            <div className={styles.createCardHeading}>
+              <div><span>产品研发 / 产品系列</span><h2>{seriesDraft === 'new' ? '新建产品系列' : '编辑产品系列'}</h2>
+              <p>产品系列是新建整车时必须选择的分类。系列必须指向一个已启用的技术平台；系列编码建档后不可修改。</p></div>
+              <button type="button" className={styles.createClose} aria-label="关闭" disabled={savingSeries} onClick={() => setSeriesDraft(null)}>×</button>
+            </div>
+            {seriesDraft === 'new'
+              ? <label>系列编码<input name="code" autoFocus maxLength={32} required pattern="[A-Za-z][A-Za-z0-9_-]*" placeholder="如 A、FC" /></label>
+              : <label>系列编码<input name="code" defaultValue={seriesDraft.code} readOnly /></label>}
+            <label>系列中文名称<input name="nameZh" autoFocus={seriesDraft !== 'new'} required maxLength={160}
+              defaultValue={seriesDraft === 'new' ? '' : seriesDraft.name_zh} placeholder="如 折叠自行车系列" /></label>
+            <label>系列英文名称<input name="nameEn" required maxLength={160}
+              defaultValue={seriesDraft === 'new' ? '' : seriesDraft.name_en} placeholder="如 Folding Series" /></label>
+            <label>默认技术平台<select name="defaultPlatformId" required defaultValue={seriesDraft === 'new' ? '' : seriesDraft.default_platform_id ?? ''}>
+              <option value="" disabled>选择已启用的技术平台</option>
+              {activePlatforms.map(platform => <option key={platform.id} value={platform.id}>{platform.code} · {platform.name}</option>)}
+            </select><small>只有启用的技术平台可选；新建整车会继承该平台归入工程档案。</small></label>
+            {seriesDraft !== 'new' ? <label>状态<select name="status" defaultValue={seriesDraft.status}>
+              <option value="DRAFT">草稿</option><option value="ACTIVE">启用</option><option value="RETIRED">归档 / 停用</option>
+            </select></label> : null}
+            {!activePlatforms.length ? <p className={styles.archiveError}>目前没有已启用的技术平台，无法保存产品系列；请先启用一个技术平台。</p> : null}
+            {seriesDraft !== 'new' && catalog.models.some(model => model.series_id === seriesDraft.id && model.status !== 'RETIRED')
+              ? <p className={styles.archiveFootnote}>此系列仍有关联的未退役整车，归档前需要先处理这些整车；可正常修改名称和默认平台。</p> : null}
+            <div className={styles.createActions}>
+              <button type="button" className={styles.archiveSecondaryButton} disabled={savingSeries} onClick={() => setSeriesDraft(null)}>取消</button>
+              <button type="submit" className={styles.archivePrimaryButton} disabled={savingSeries || !activePlatforms.length}>{savingSeries ? '正在保存…' : '保存系列'}</button>
             </div>
           </form>
         </div>
