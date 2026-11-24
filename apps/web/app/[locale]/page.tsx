@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { HomePage } from '../_components/home/home-page';
 import { homepageProductBindings } from '../_components/home/public-product-bindings';
+import { homepageLayout } from '../_components/home/public-home-layout';
 import { isLocale } from '../_lib/i18n/routing';
 import { translator } from '../_lib/i18n';
 import { portalUrlFor } from '../_lib/portal-routing';
@@ -23,6 +24,7 @@ export default async function LocalizedHome({ params }: Props) {
   const host = requestHeaders.get('host') ?? '';
   const prefix = host.toLowerCase().split('.')[0];
   if (prefix === 'admin' || prefix === 'my' || prefix === 'dealer') redirect(`/${prefix}`);
-  const productBindings = await homepageProductBindings();
-  return <HomePage locale={locale} myUrl={portalUrlFor(host, 'my')} dealerUrl={portalUrlFor(host, 'dealer')} productBindings={productBindings} />;
+  // 装修版式与商品绑定互不依赖，并行取；装修接口失败时 layout 为 null，页面回退内置设计
+  const [productBindings, layout] = await Promise.all([homepageProductBindings(), homepageLayout()]);
+  return <HomePage locale={locale} myUrl={portalUrlFor(host, 'my')} dealerUrl={portalUrlFor(host, 'dealer')} productBindings={productBindings} layout={layout} />;
 }

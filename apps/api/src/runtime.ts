@@ -2,7 +2,7 @@ import {ComparisonMediaService} from './comparison-media.js';
 import {comparisonStorageFromEnv} from './comparison-media-storage.js';
 import { createAssetService } from '@alsvid/assets';
 import { createAuditService } from '@alsvid/audit';
-import { createCommerceService,createComparisonCatalogService,type ComparisonCatalogService,CommerceOrderOperationsService,StorefrontOrderService,StorefrontLayoutService } from '@alsvid/commerce';
+import { createCommerceService,createComparisonCatalogService,type ComparisonCatalogService,CommerceOrderOperationsService,StorefrontOrderService,StorefrontLayoutService,HomeLayoutService } from '@alsvid/commerce';
 import {StorefrontReadinessService} from '@alsvid/commerce';
 import { Database } from '@alsvid/database';
 import { createDealerService } from '@alsvid/dealer';
@@ -50,6 +50,8 @@ export const commerceService = createCommerceService(database, auditService);
 export const commerceOrderOperationsService = new CommerceOrderOperationsService(database, auditService);
 export const storefrontOrderService = new StorefrontOrderService(database, auditService);
 export const storefrontLayoutService = new StorefrontLayoutService(database, auditService);
+// 官网首页公开渲染专用：只读 html/css，不经过权限模型（由公开端点限流保护）
+export const homeLayoutService = new HomeLayoutService(database);
 export const storefrontReadinessService = new StorefrontReadinessService(database);
 export const integrationService = createIntegrationService(database, auditService);
 export const financeService = createFinanceService(database, auditService);

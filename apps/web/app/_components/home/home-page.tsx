@@ -1,5 +1,6 @@
 import { HomePosterHero, FoldingSteps } from "./home-interactions";
 import type { HomepageProductBindings } from './public-product-bindings';
+import type { PublicHomeLayout } from './public-home-layout';
 import { PublicSiteHeader } from "../public-site-header";
 import { translator, type Locale } from "../../_lib/i18n";
 import cupStyles from "../product/cup-holder-product.module.css";
@@ -10,16 +11,29 @@ export function HomePage({
   dealerUrl,
   locale = "zh",
   productBindings,
+  layout,
 }: {
   myUrl: string;
   dealerUrl: string;
   locale?: Locale;
   productBindings?: HomepageProductBindings;
+  /** 后台（8089）装修并同步过来的整页版式；为空时用下面的内置设计 */
+  layout?: PublicHomeLayout | null;
 }) {
   const t = translator(locale);
   const detail = (slug: string) => `/${locale}/explore/${slug}`;
   const shopUrl = detail("fc1");
   const catalogAccessoriesUrl = `/${locale}/bikes#accessories`;
+  // 装修版式是整页静态结构 + 样式（后端已拦截脚本与内联事件），直接整页渲染，
+  // 保留内置设计作为兜底：装修系统不可用、未同步或结构异常时首页照常打开。
+  if (layout?.html) {
+    return (
+      <main id="top" lang={locale} data-home-design="admin-layout" data-layout-version={layout.version}>
+        <style dangerouslySetInnerHTML={{ __html: layout.css }} />
+        <div dangerouslySetInnerHTML={{ __html: layout.html }} />
+      </main>
+    );
+  }
   return (
     <main
       translate="no"

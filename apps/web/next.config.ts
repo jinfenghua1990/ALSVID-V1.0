@@ -52,6 +52,13 @@ const nextConfig: NextConfig = {
       ['/people', '/admin/settings'],
     ];
     return [
+      // Legacy marketing URLs kept in old CMS pages / browser bookmarks. The
+      // canonical brand and owner-service content lives under /explore and
+      // /service-locations; 301 keeps those old links from dead-ending.
+      ...['zh', 'en', 'de'].flatMap(locale => [
+        { source: `/${locale}/brand`, destination: `/${locale}/explore/about-story`, permanent: true },
+        { source: `/${locale}/services`, destination: `/${locale}/service-locations`, permanent: true },
+      ]),
       { source: '/admin-legacy', destination: '/admin', permanent: true },
       { source: '/admin-preview', destination: '/admin', permanent: true },
       { source: '/admin/workbench-v2', destination: '/admin', permanent: true },

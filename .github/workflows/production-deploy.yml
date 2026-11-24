@@ -468,7 +468,7 @@ jobs:
         run: |
           set -euo pipefail
           env_vars="NODE_ENV=production,ALSVID_ENV=production,ALSVID_RELEASE_SHA=$RELEASE_SHA,ALSVID_EMAIL_TEST_MODE=false,OBJECT_STORAGE_PROVIDER=r2,OBJECT_STORAGE_ENDPOINT=$R2_ENDPOINT,OBJECT_STORAGE_BUCKET=$R2_BUCKET,ALSVID_INTERNAL_EMAIL_DOMAINS=${ALSVID_INTERNAL_EMAIL_DOMAINS:-},ALSVID_INTERNAL_REGISTRATION_MODE=${ALSVID_INTERNAL_REGISTRATION_MODE:-company_domain},ALSVID_INITIAL_ADMIN_EMAIL=${ALSVID_INITIAL_ADMIN_EMAIL:-},MAIL_PROVIDER=${MAIL_PROVIDER:-resend},MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-noreply@alsvidbike.com},MAIL_FROM_NAME=ALSVID,FC1_RESERVATION_EMAIL=${NEXT_PUBLIC_FC1_RESERVATION_EMAIL:-},AUTH_BASE_URL=$AUTH_BASE_URL,ALSVID_ADMIN_PASSWORD_LOGIN_ENABLED=true,ALSVID_DEALER_PASSWORD_LOGIN_ENABLED=true,ALSVID_SUPPLIER_PASSWORD_LOGIN_ENABLED=true"
-          secret_bindings="DATABASE_URL=alsvid-database-url:latest,OBJECT_STORAGE_ACCESS_KEY=alsvid-r2-access-key:latest,OBJECT_STORAGE_SECRET_KEY=alsvid-r2-secret-key:latest,MAIL_API_KEY=alsvidbike-mail-api-key:latest"
+          secret_bindings="DATABASE_URL=alsvid-database-url:latest,OBJECT_STORAGE_ACCESS_KEY=alsvid-r2-access-key:latest,OBJECT_STORAGE_SECRET_KEY=alsvid-r2-secret-key:latest,MAIL_API_KEY=alsvidbike-mail-api-key:latest,ALSVID_LAYOUT_SYNC_TOKEN=alsvid-layout-sync-token:latest"
 
           gcloud run deploy "$API_SERVICE" \
             --project "$GCP_PROJECT_ID" \
@@ -501,6 +501,16 @@ jobs:
         env:
           ALSVID_API_URL: ${{ steps.api.outputs.url }}
         run: node scripts/check-dealer-api-readiness.mjs
+
+      - name: Verify public home-layout endpoint after API rollout
+        if: ${{ steps.release.outputs.rollback != 'true' }}
+        env:
+          API_URL: ${{ steps.api.outputs.url }}
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --retry 5 --retry-delay 5 "$API_URL/api/v1/public/home-layout")"
+          echo "$response" | jq -e 'type == "object" and has("data")' >/dev/null
+          echo "Public home-layout endpoint is live"
 
       - name: Verify production mail configuration on the deployed revision
         env:
